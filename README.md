@@ -2,7 +2,7 @@
 
 [![Python Versions](https://img.shields.io/pypi/pyversions/relation-client.svg)](https://pypi.org/project/relation-client/)
 [![PyPI Version](https://img.shields.io/pypi/v/relation-client.svg)](https://pypi.org/project/relation-client/)
-[![License](https://img.shields.io/github/license/yourusername/relation-client.svg)](https://github.com/yourusername/relation-client/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/solahsoyalp/relation_client.svg)](https://github.com/solahsoyalp/relation_client/blob/main/LICENSE)
 
 Re:lation APIを簡単に利用するためのPythonライブラリです。このクライアントライブラリを使用することで、Re:lation APIを簡単かつ効率的に操作することができます。
 
@@ -688,8 +688,8 @@ Re:lation APIにはレート制限があります。制限に達すると、`Rat
 
 ```bash
 # リポジトリのクローン
-git clone https://github.com/yourusername/relation-client.git
-cd relation-client
+git clone https://github.com/solahsoyalp/relation_client.git
+cd relation_client
 
 # 開発用の依存関係をインストール
 pip install -e ".[dev]"
@@ -717,11 +717,11 @@ pytest --cov=relation_client tests/
 2. 機能ブランチを作成する：`git checkout -b my-new-feature`
 3. 変更をコミットする：`git commit -am 'Add some feature'`
 4. ブランチをプッシュする：`git push origin my-new-feature`
-5. プルリクエストを作成する
+5. プルリクエストを作成する：https://github.com/solahsoyalp/relation_client/pulls
 
 ## 問い合わせ
 
-質問や問題がある場合は、[GitHub Issues](https://github.com/yourusername/relation-client/issues)で報告してください。
+質問や問題がある場合は、[GitHub Issues](https://github.com/solahsoyalp/relation_client/issues)で報告してください。
 
 ---
 
@@ -758,7 +758,7 @@ pip install relation-client
 If you want to use the latest development version, you can install directly from the GitHub repository:
 
 ```bash
-pip install git+https://github.com/yourusername/relation-client.git
+pip install git+https://github.com/solahsoyalp/relation_client.git
 ```
 
 ## Prerequisites
@@ -833,6 +833,12 @@ This project is provided under the MIT License. See the [LICENSE](LICENSE) file 
 
 Contributions are welcome! We look forward to bug reports, feature requests, pull requests, and any other forms of contribution. For details, please refer to the [contribution guidelines](docs/contributing.md).
 
+1. Fork this repository
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Create a pull request: https://github.com/solahsoyalp/relation_client/pulls
+
 ## Contact
 
-If you have questions or issues, please report them on [GitHub Issues](https://github.com/yourusername/relation-client/issues).
+If you have questions or issues, please report them on [GitHub Issues](https://github.com/solahsoyalp/relation_client/issues).
