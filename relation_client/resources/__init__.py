@@ -15,4 +15,6 @@ from .case_categories import CaseCategoryResource
 from .labels import LabelResource
 from .badges import BadgeResource
 from .mail_accounts import MailAccountResource
-from .mails import MailResource 
+from .mails import MailResource
+from .templates import TemplateResource
+from .attachments import AttachmentResource 

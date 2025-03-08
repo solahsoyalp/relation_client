@@ -33,6 +33,8 @@ from .resources.labels import LabelResource
 from .resources.badges import BadgeResource
 from .resources.mail_accounts import MailAccountResource
 from .resources.mails import MailResource
+from .resources.templates import TemplateResource
+from .resources.attachments import AttachmentResource
 
 
 class RelationClient:
@@ -87,4 +89,135 @@ class RelationClient:
         self.badges = BadgeResource(self)
         self.mail_accounts = MailAccountResource(self)
         self.mails = MailResource(self)
+        self.templates = TemplateResource(self)
+        self.attachments = AttachmentResource(self)
         
+    def request(
+        self,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """APIリクエストを実行します
+
+        Args:
+            method: HTTPメソッド (GET, POST, PUT, DELETE)
+            path: APIパス (先頭の / は不要)
+            params: クエリパラメータ
+            data: リクエストボディ (form-data)
+            json_data: リクエストボディ (JSON)
+
+        Returns:
+            レスポンスの辞書表現
+
+        Raises:
+            AuthenticationError: 認証エラー (401)
+            PermissionError: 権限エラー (403)
+            ResourceNotFoundError: リソースが見つからないエラー (404)
+            RateLimitError: レートリミットエラー (429)
+            InvalidRequestError: 無効なリクエストエラー (400, 415)
+            APIError: APIエラー (500)
+            ServiceUnavailableError: サービス利用不可エラー (503)
+        """
+        url = f"{self._base_url}/{path.lstrip('/')}"
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
+        
+        retry_count = 0
+        while retry_count <= self.max_retries:
+            try:
+                response = self._session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=params,
+                    data=data,
+                    json=json_data,
+                    timeout=self.timeout
+                )
+                
+                # レスポンスを処理
+                if response.status_code < 400:
+                    # 成功レスポンス
+                    if not response.content:
+                        return {}
+                    try:
+                        return response.json()
+                    except ValueError:
+                        return {"data": response.text}
+                
+                # エラーレスポンスの処理
+                error_message = self._extract_error_message(response)
+                
+                if response.status_code == HTTP_UNAUTHORIZED:
+                    raise AuthenticationError(error_message, response)
+                elif response.status_code == HTTP_FORBIDDEN:
+                    raise PermissionError(error_message, response)
+                elif response.status_code == HTTP_NOT_FOUND:
+                    raise ResourceNotFoundError(error_message, response)
+                elif response.status_code == HTTP_TOO_MANY_REQUESTS:
+                    # レートリミットエラー時はリトライ
+                    retry_after = int(response.headers.get('Retry-After', self.retry_delay))
+                    if retry_count < self.max_retries:
+                        time.sleep(retry_after)
+                        retry_count += 1
+                        continue
+                    raise RateLimitError(error_message, response)
+                elif response.status_code in (HTTP_BAD_REQUEST, HTTP_UNSUPPORTED_MEDIA_TYPE):
+                    raise InvalidRequestError(error_message, response)
+                elif response.status_code == HTTP_SERVER_ERROR:
+                    raise APIError(error_message, response)
+                elif response.status_code == HTTP_SERVICE_UNAVAILABLE:
+                    # メンテナンス時はリトライ
+                    if retry_count < self.max_retries:
+                        time.sleep(self.retry_delay)
+                        retry_count += 1
+                        continue
+                    raise ServiceUnavailableError(error_message, response)
+                else:
+                    raise APIError(f"予期しないステータスコード: {response.status_code}", response)
+                
+            except (requests.ConnectionError, requests.Timeout) as e:
+                # 接続エラーやタイムアウトのリトライ
+                if retry_count < self.max_retries:
+                    time.sleep(self.retry_delay)
+                    retry_count += 1
+                    continue
+                raise APIError(f"接続エラー: {str(e)}")
+                
+        # ここに到達することはないはず
+        raise APIError("予期しないエラー: 最大リトライ回数を超えました")
+    
+    def _extract_error_message(self, response: requests.Response) -> str:
+        """レスポンスからエラーメッセージを抽出"""
+        try:
+            error_data = response.json()
+            if isinstance(error_data, dict):
+                if 'error' in error_data:
+                    return error_data['error']
+                elif 'message' in error_data:
+                    return error_data['message']
+            return str(error_data)
+        except (ValueError, KeyError):
+            return response.text or f"HTTPエラー {response.status_code}"
+            
+    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """GETリクエストを実行"""
+        return self.request('GET', path, params=params)
+        
+    def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """POSTリクエストを実行"""
+        return self.request('POST', path, json_data=data)
+        
+    def put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """PUTリクエストを実行"""
+        return self.request('PUT', path, json_data=data)
+        
+    def delete(self, path: str) -> Dict[str, Any]:
+        """DELETEリクエストを実行"""
+        return self.request('DELETE', path) 
