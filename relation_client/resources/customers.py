@@ -5,6 +5,7 @@
 """
 
 from typing import Dict, Any, List, Optional, Iterator
+from urllib.parse import quote
 
 from ..models import Customer
 
@@ -244,7 +245,7 @@ class CustomerResource:
         """
         # APIリクエスト実行
         response = self.client.get(
-            f'customer_groups/{customer_group_id}/customers/system_id1/{system_id1}'
+            f'customer_groups/{customer_group_id}/customers/system_id1/{quote(system_id1, safe="")}'
         )
 
         # レスポンスからCustomerオブジェクトを作成
@@ -266,7 +267,7 @@ class CustomerResource:
         """
         # APIリクエスト実行
         response = self.client.get(
-            f'customer_groups/{customer_group_id}/customers/email/{email}'
+            f'customer_groups/{customer_group_id}/customers/email/{quote(email, safe="")}'
         )
 
         # レスポンスからCustomerオブジェクトを作成
@@ -349,7 +350,7 @@ class CustomerResource:
 
         # APIリクエスト実行
         response = self.client.put(
-            f'customer_groups/{customer_group_id}/customers/system_id1/{system_id1}',
+            f'customer_groups/{customer_group_id}/customers/system_id1/{quote(system_id1, safe="")}',
             data=data
         )
 
@@ -437,7 +438,7 @@ class CustomerResource:
 
         # APIリクエスト実行
         response = self.client.put(
-            f'customer_groups/{customer_group_id}/customers/email/{email}',
+            f'customer_groups/{customer_group_id}/customers/email/{quote(email, safe="")}',
             data=data
         )
 
@@ -457,7 +458,7 @@ class CustomerResource:
         """
         # APIリクエスト実行
         self.client.delete(
-            f'customer_groups/{customer_group_id}/customers/system_id1/{system_id1}'
+            f'customer_groups/{customer_group_id}/customers/system_id1/{quote(system_id1, safe="")}'
         )
 
     def delete_by_email(
@@ -473,5 +474,5 @@ class CustomerResource:
         """
         # APIリクエスト実行
         self.client.delete(
-            f'customer_groups/{customer_group_id}/customers/email/{email}'
+            f'customer_groups/{customer_group_id}/customers/email/{quote(email, safe="")}'
         )

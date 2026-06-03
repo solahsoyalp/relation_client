@@ -237,6 +237,51 @@ class TestCustomerResource(unittest.TestCase):
             'customer_groups/1/customers/system_id1/EMP0001'
         )
 
+    @patch.object(RelationClient, 'get')
+    def test_get_by_email_encodes_path_segment(self, mock_get):
+        """email がパスセグメントとして安全にエンコードされることを確認"""
+        mock_get.return_value = {'customer_id': 1}
+
+        # '?' でクエリ注入を試みる値
+        self.client.customers.get_by_email(
+            customer_group_id=self.customer_group_id,
+            email='a@example.com?per_page=999'
+        )
+
+        # '@' '?' '=' がすべてパーセントエンコードされ、パスが変形されないこと
+        mock_get.assert_called_once_with(
+            'customer_groups/1/customers/email/a%40example.com%3Fper_page%3D999'
+        )
+
+    @patch.object(RelationClient, 'get')
+    def test_get_by_system_id1_encodes_path_segment(self, mock_get):
+        """system_id1 の '/' や日本語がエンコードされることを確認"""
+        mock_get.return_value = {'customer_id': 1}
+
+        self.client.customers.get_by_system_id1(
+            customer_group_id=self.customer_group_id,
+            system_id1='a/b 太郎'
+        )
+
+        # '/' → %2F, 空白 → %20, 日本語 → UTF-8 パーセントエンコード
+        mock_get.assert_called_once_with(
+            'customer_groups/1/customers/system_id1/a%2Fb%20%E5%A4%AA%E9%83%8E'
+        )
+
+    @patch.object(RelationClient, 'delete')
+    def test_delete_by_email_encodes_path_segment(self, mock_delete):
+        """delete 系でも email がエンコードされることを確認"""
+        mock_delete.return_value = {}
+
+        self.client.customers.delete_by_email(
+            customer_group_id=self.customer_group_id,
+            email='x/y@example.com'
+        )
+
+        mock_delete.assert_called_once_with(
+            'customer_groups/1/customers/email/x%2Fy%40example.com'
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
