@@ -14,7 +14,8 @@ def _parse_dt(value):
         return None
     try:
         return datetime.fromisoformat(value.replace('Z', '+00:00'))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
+        # 文字列以外（int 等）が渡された場合の .replace 失敗も含め、None を返す
         return None
 
 
