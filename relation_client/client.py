@@ -127,7 +127,12 @@ class RelationClient:
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         }
-        
+
+        # 冪等なメソッド (GET, DELETE) のみネットワークエラー時にリトライする。
+        # POST/PUT はサーバ側で処理が完了した後にタイムアウトが発生する可能性があり、
+        # 盲目的にリトライするとメール二重送信などの副作用が重複する恐れがあるためリトライしない。
+        idempotent = method.upper() in ("GET", "DELETE")
+
         retry_count = 0
         while retry_count <= self.max_retries:
             try:
@@ -183,8 +188,9 @@ class RelationClient:
                     raise APIError(f"予期しないステータスコード: {response.status_code}", response)
                 
             except (requests.ConnectionError, requests.Timeout) as e:
-                # 接続エラーやタイムアウトのリトライ
-                if retry_count < self.max_retries:
+                # 接続エラーやタイムアウトのリトライ。
+                # 非冪等なメソッド (POST, PUT) は副作用の重複を避けるため即座に例外を送出する。
+                if idempotent and retry_count < self.max_retries:
                     time.sleep(self.retry_delay)
                     retry_count += 1
                     continue

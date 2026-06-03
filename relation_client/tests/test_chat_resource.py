@@ -144,6 +144,7 @@ class TestChatResource:
             "item_number": "item_123",
             "item_name": "サンプル商品",
             "item_url": "https://example.com/item/123",
+            "social_gift_user_type": "注文者",
             "conversations": [
                 {
                     "r_messe_conversation_id": 1,
@@ -170,6 +171,7 @@ class TestChatResource:
         assert result.inquiry_type == "返品について"
         assert result.inquiry_number == "inquiry_123"
         assert result.item_name == "サンプル商品"
+        assert result.social_gift_user_type == "注文者"
         assert len(result.conversations) == 1
         assert result.conversations[0].r_messe_conversation_id == 1
         assert result.conversations[0].note == "返品手続きを教えてください"

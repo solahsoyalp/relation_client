@@ -18,8 +18,9 @@ class MailResource:
         self.client = client
 
     def send(self, message_box_id: int, mail_account_id: int, to: str, subject: str, body: str,
-             cc: Optional[str] = None, bcc: Optional[str] = None,
+             status_cd: str = "open", cc: Optional[str] = None, bcc: Optional[str] = None,
              reply_to: Optional[str] = None, is_html: bool = False,
+             pending_reason_id: Optional[int] = None,
              attachments: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """メールを送信する
 
@@ -29,16 +30,19 @@ class MailResource:
             to: 宛先メールアドレス
             subject: 件名
             body: 本文
+            status_cd: ステータスコード (省略時は "open")
             cc: CCアドレス (省略可)
             bcc: BCCアドレス (省略可)
             reply_to: Reply-Toアドレス (省略可)
             is_html: HTMLメールとして送信するかどうか (省略可)
+            pending_reason_id: 保留理由ID (省略可)
             attachments: 添付ファイル情報のリスト (省略可)
 
         Returns:
             Dict[str, Any]: 送信結果
         """
         data = {
+            'status_cd': status_cd,
             'mail_account_id': mail_account_id,
             'to': to,
             'subject': subject,
@@ -52,14 +56,18 @@ class MailResource:
             data['bcc'] = bcc
         if reply_to:
             data['reply_to'] = reply_to
+        if pending_reason_id:
+            data['pending_reason_id'] = pending_reason_id
         if attachments:
             data['attachments'] = attachments
 
-        return self.client.post(f'{message_box_id}/mails/send', data=data)
+        return self.client.post(f'{message_box_id}/mails', data=data)
 
     def reply(self, message_box_id: int, mail_account_id: int, message_id: int,
-              body: str, cc: Optional[str] = None, bcc: Optional[str] = None,
-              is_html: bool = False, attachments: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+              body: str, to: Optional[str] = None, subject: Optional[str] = None,
+              status_cd: str = "open", cc: Optional[str] = None, bcc: Optional[str] = None,
+              is_html: bool = False, pending_reason_id: Optional[int] = None,
+              attachments: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """メールに返信する
 
         Args:
@@ -67,25 +75,36 @@ class MailResource:
             mail_account_id: メールアカウントID
             message_id: 返信元のメッセージID
             body: 本文
+            to: 宛先メールアドレス (省略可)
+            subject: 件名 (省略可)
+            status_cd: ステータスコード (省略時は "open")
             cc: CCアドレス (省略可)
             bcc: BCCアドレス (省略可)
             is_html: HTMLメールとして送信するかどうか (省略可)
+            pending_reason_id: 保留理由ID (省略可)
             attachments: 添付ファイル情報のリスト (省略可)
 
         Returns:
             Dict[str, Any]: 返信結果
         """
         data = {
-            'mail_account_id': mail_account_id,
             'message_id': message_id,
+            'status_cd': status_cd,
+            'mail_account_id': mail_account_id,
             'body': body,
             'is_html': is_html
         }
 
+        if to:
+            data['to'] = to
+        if subject:
+            data['subject'] = subject
         if cc:
             data['cc'] = cc
         if bcc:
             data['bcc'] = bcc
+        if pending_reason_id:
+            data['pending_reason_id'] = pending_reason_id
         if attachments:
             data['attachments'] = attachments
 
@@ -93,8 +112,9 @@ class MailResource:
 
     def draft(self, message_box_id: int, mail_account_id: int, to: Optional[str] = None,
               subject: Optional[str] = None, body: Optional[str] = None,
-              cc: Optional[str] = None, bcc: Optional[str] = None, reply_to: Optional[str] = None,
-              is_html: bool = False, message_id: Optional[int] = None,
+              status_cd: str = "open", cc: Optional[str] = None, bcc: Optional[str] = None,
+              reply_to: Optional[str] = None, is_html: bool = False,
+              message_id: Optional[int] = None, pending_reason_id: Optional[int] = None,
               attachments: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """メール下書きを作成する
 
@@ -104,17 +124,20 @@ class MailResource:
             to: 宛先メールアドレス (新規作成時必須)
             subject: 件名 (新規作成時必須)
             body: 本文
+            status_cd: ステータスコード (省略時は "open")
             cc: CCアドレス (省略可)
             bcc: BCCアドレス (省略可)
             reply_to: Reply-Toアドレス (省略可)
             is_html: HTMLメールとして送信するかどうか (省略可)
             message_id: 返信元のメッセージID (省略すると新規作成)
+            pending_reason_id: 保留理由ID (省略可)
             attachments: 添付ファイル情報のリスト (省略可)
 
         Returns:
             Dict[str, Any]: 下書き作成結果
         """
         data = {
+            'status_cd': status_cd,
             'mail_account_id': mail_account_id,
             'is_html': is_html
         }
@@ -133,7 +156,9 @@ class MailResource:
             data['reply_to'] = reply_to
         if message_id:
             data['message_id'] = message_id
+        if pending_reason_id:
+            data['pending_reason_id'] = pending_reason_id
         if attachments:
             data['attachments'] = attachments
 
-        return self.client.post(f'{message_box_id}/mails/draft', data=data) 
+        return self.client.post(f'{message_box_id}/mails/draft', data=data)

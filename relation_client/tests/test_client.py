@@ -5,8 +5,10 @@ RelationClientのテスト
 import unittest
 from unittest.mock import patch, MagicMock
 
+import requests
+
 from relation_client import RelationClient
-from relation_client.exceptions import AuthenticationError
+from relation_client.exceptions import AuthenticationError, APIError
 
 
 class TestRelationClient(unittest.TestCase):
@@ -97,6 +99,34 @@ class TestRelationClient(unittest.TestCase):
         # 例外が発生することを確認
         with self.assertRaises(AuthenticationError):
             self.client.get('test_path')
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_post_not_retried_on_connection_error(self, mock_request, mock_sleep):
+        """POSTは接続エラー時にリトライされず、APIErrorが送出されることを確認"""
+        # 接続エラーを常に発生させる
+        mock_request.side_effect = requests.ConnectionError("boom")
+
+        # 非冪等なPOSTはリトライされず即座にAPIErrorになる
+        with self.assertRaises(APIError):
+            self.client.post('test_path', {'name': 'test'})
+
+        # session.request は1回しか呼ばれない (リトライなし)
+        self.assertEqual(mock_request.call_count, 1)
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_get_retried_on_connection_error(self, mock_request, mock_sleep):
+        """GETは接続エラー時にmax_retries回までリトライされることを確認"""
+        # 接続エラーを常に発生させる
+        mock_request.side_effect = requests.ConnectionError("boom")
+
+        # 冪等なGETはリトライされ、最終的にAPIErrorになる
+        with self.assertRaises(APIError):
+            self.client.get('test_path')
+
+        # 初回 + max_retries 回のリトライで合計 max_retries + 1 回呼ばれる
+        self.assertEqual(mock_request.call_count, self.client.max_retries + 1)
 
 
 if __name__ == '__main__':

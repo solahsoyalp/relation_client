@@ -29,7 +29,8 @@ class TestTicketResource:
         """search()メソッドのテスト"""
         # 準備
         message_box_id = 123
-        client_mock.get.return_value = [
+        # チケット検索は POST {message_box_id}/tickets/search でリストを返す
+        client_mock.post.return_value = [
             {
                 "ticket_id": 1,
                 "assignee": "yamada",
@@ -60,8 +61,8 @@ class TestTicketResource:
         )
 
         # 検証
-        client_mock.get.assert_called_once()
-        assert f"{message_box_id}/tickets" in client_mock.get.call_args[0][0]
+        client_mock.post.assert_called_once()
+        assert f"{message_box_id}/tickets/search" in client_mock.post.call_args[0][0]
         assert isinstance(result, list)
         assert len(result) == 2
         assert isinstance(result[0], Ticket)
@@ -96,6 +97,19 @@ class TestTicketResource:
                     "body": "商品の詳細を教えてください",
                     "method_cd": "mail",
                     "action_cd": "received"
+                },
+                {
+                    "message_id": 790,
+                    "method_cd": "record",
+                    "action_cd": "received",
+                    "title": "電話応対メモ",
+                    "body": "電話で問い合わせ対応",
+                    "record": {
+                        "customer_id": 34,
+                        "customer_name": "山田 太郎",
+                        "customer_emails": ["yamada@example.com"],
+                        "customer_tels": ["03-1234-5678"]
+                    }
                 }
             ]
         }
@@ -110,12 +124,20 @@ class TestTicketResource:
         assert result.assignee == "yamada"
         assert result.status_cd == "open"
         assert result.title == "お問い合わせ"
-        assert len(result.messages) == 1
+        assert len(result.messages) == 2
         assert isinstance(result.messages[0], Message)
         assert result.messages[0].message_id == 789
         assert result.messages[0].from_address == "customer@example.com"
         assert result.messages[0].title == "商品について"
         assert result.messages[0].method_cd == "mail"
+        assert result.messages[0].record is None
+        # 応対メモ（method_cd が record）には record フィールドが付与される
+        assert result.messages[1].method_cd == "record"
+        assert result.messages[1].record is not None
+        assert result.messages[1].record.customer_id == 34
+        assert result.messages[1].record.customer_name == "山田 太郎"
+        assert result.messages[1].record.customer_emails == ["yamada@example.com"]
+        assert result.messages[1].record.customer_tels == ["03-1234-5678"]
 
     def test_update(self, ticket_resource, client_mock):
         """update()メソッドのテスト"""
@@ -144,7 +166,7 @@ class TestTicketResource:
         )
 
         # 検証
-        client_mock.put.assert_called_once_with(f"{message_box_id}/tickets/{ticket_id}", update_data)
+        client_mock.put.assert_called_once_with(f"{message_box_id}/tickets/{ticket_id}", data=update_data)
 
     def test_create_record(self, ticket_resource, client_mock):
         """create_record()メソッドのテスト"""
@@ -199,7 +221,9 @@ class TestTicketResource:
         )
 
         # 検証
+        # 応対メモは ticket_id を指定しても受信箱直下の {message_box_id}/records に POST する
         client_mock.post.assert_called_once()
-        assert f"{message_box_id}/tickets/{ticket_id}/records" in client_mock.post.call_args[0][0]
+        assert f"{message_box_id}/records" in client_mock.post.call_args[0][0]
+        assert client_mock.post.call_args.kwargs["data"]["ticket_id"] == ticket_id
         assert isinstance(result, dict)
-        assert result["message_id"] == 790 
+        assert result["message_id"] == 790

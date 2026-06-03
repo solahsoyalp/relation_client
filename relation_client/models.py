@@ -182,6 +182,31 @@ class Attachment(RelationObject):
 
 
 @dataclass
+class Record(RelationObject):
+    """応対メモに紐づく顧客情報
+
+    method_cd が ``record`` のメッセージに付与される ``record`` フィールドを表します。
+    顧客情報が紐づかない場合、メッセージの ``record`` は ``None`` になります。
+    """
+    customer_id: Optional[int] = None
+    customer_name: Optional[str] = None
+    customer_emails: List[str] = field(default_factory=list)
+    customer_tels: List[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Record':
+        """辞書からRecordオブジェクトを作成"""
+        instance = super().from_dict(data)
+
+        instance.customer_id = data.get('customer_id')
+        instance.customer_name = data.get('customer_name')
+        instance.customer_emails = data.get('customer_emails', [])
+        instance.customer_tels = data.get('customer_tels', [])
+
+        return instance
+
+
+@dataclass
 class Message(RelationObject):
     """メッセージ情報"""
     message_id: int = None
@@ -200,6 +225,7 @@ class Message(RelationObject):
     comments: List[Comment] = field(default_factory=list)
     attachments: List[Attachment] = field(default_factory=list)
     reply_to: Optional[str] = None
+    record: Optional['Record'] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Message':
@@ -244,7 +270,12 @@ class Message(RelationObject):
         
         # 添付ファイル
         instance.attachments = [Attachment.from_dict(attachment) for attachment in data.get('attachments', [])]
-                
+
+        # 応対メモに紐づく顧客情報（method_cd が record の場合に付与。紐づかない場合は None）
+        record_data = data.get('record')
+        if isinstance(record_data, dict):
+            instance.record = Record.from_dict(record_data)
+
         return instance
 
 
@@ -465,13 +496,14 @@ class RMesse(RelationObject):
     item_number: str = None
     item_name: str = None
     item_url: str = None
+    social_gift_user_type: Optional[str] = None
     conversations: List[RMesseConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RMesse':
         """辞書からRMesseオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.email = data.get('email')
         instance.inquiry_status = data.get('inquiry_status')
@@ -483,6 +515,8 @@ class RMesse(RelationObject):
         instance.item_number = data.get('item_number')
         instance.item_name = data.get('item_name')
         instance.item_url = data.get('item_url')
+        # ソーシャルギフトのユーザー種別（"注文者" / "受取人" / None）
+        instance.social_gift_user_type = data.get('social_gift_user_type')
         
         # 会話
         if 'conversations' in data:

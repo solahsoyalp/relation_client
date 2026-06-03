@@ -36,16 +36,17 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     project_urls={
         'Bug Reports': 'https://github.com/solahsoyalp/relation_client/issues',
         'Source': 'https://github.com/solahsoyalp/relation_client',
     },
     include_package_data=True,
-) 
+    package_data={'relation_client': ['py.typed']},
+)

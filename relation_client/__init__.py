@@ -9,7 +9,7 @@ __version__ = '0.1.0'
 from .client import RelationClient  # noqa
 from .models import (
     Customer, CustomerGroup, Email, Tel,
-    Ticket, Message, Comment, Attachment,
+    Ticket, Message, Record, Comment, Attachment,
     ChatPlus, Yahoo, RMesse, Line,
     ChatConversation, ChatPlusConversation, YahooConversation, RMesseConversation, LineConversation,
     MessageBox, PendingReason, User, CaseCategory, Label, Badge, MailAccount, Template
