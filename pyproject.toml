@@ -13,7 +13,8 @@ authors = [
     { name = "solah soyalp", email = "solah.soyalp@gmail.com" },
 ]
 dependencies = [
-    "requests>=2.25.0",
+    # requests は CVE-2023-32681 対策として 2.31.0 以上を要求
+    "requests>=2.31.0",
     "pytz",
 ]
 classifiers = [
