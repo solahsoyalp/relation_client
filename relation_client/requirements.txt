@@ -1,1 +1,6 @@
-requests>=2.31.0
+# requests のセキュリティ方針（詳細は SECURITY.md 参照）:
+# - Python 3.10+: 2.33.0 以上を要求（CVE-2026-25645 / CVE-2024-35195 を回避）
+# - Python 3.8/3.9: requests 2.33.0 が 3.10+ 必須のため導入不可。
+#   各 Python が動作可能な最新（2.32.4 以上, CVE-2024-35195 回避）を要求する。
+requests>=2.33.0; python_version >= "3.10"
+requests>=2.32.4; python_version < "3.10"

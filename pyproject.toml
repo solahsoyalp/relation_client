@@ -13,8 +13,11 @@ authors = [
     { name = "solah soyalp", email = "solah.soyalp@gmail.com" },
 ]
 dependencies = [
-    # requests は CVE-2023-32681 対策として 2.31.0 以上を要求
-    "requests>=2.31.0",
+    # requests のセキュリティ方針は SECURITY.md を参照。
+    # Python 3.10+ は 2.33.0 以上（CVE-2026-25645 / CVE-2024-35195 を回避）。
+    # 3.8/3.9 は 2.33.0 が 3.10+ 必須のため、動作可能な最新（2.32.4 以上）を要求。
+    "requests>=2.33.0; python_version >= '3.10'",
+    "requests>=2.32.4; python_version < '3.10'",
     "pytz",
 ]
 classifiers = [
