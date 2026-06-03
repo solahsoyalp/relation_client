@@ -4,7 +4,7 @@ Re:lation API Python クライアントライブラリ
 Re:lationのAPIを簡単に利用するためのPythonライブラリです。
 """
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 from .client import RelationClient  # noqa
 from .exceptions import (
