@@ -9,6 +9,15 @@
 ### 追加
 - 次回リリースの変更をここに記載します
 
+## [0.3.0] - 2026-06-04
+
+### 変更（破壊的）
+- **Python 3.8 / 3.9 のサポートを終了**し、`requires-python` を `>=3.10` に引き上げ。3.8 / 3.9 を利用する場合は `0.2.x` を利用してください。
+- 依存宣言から環境マーカーを撤廃し、修正版を直接要求するよう統一: `requests>=2.33.0`・`urllib3>=2.7.0`（いずれも Python 3.10+ 必須）。classifier から 3.8 / 3.9 を削除。CI マトリクスを 3.10〜3.12 に変更。
+
+### セキュリティ
+- Python 3.8 / 3.9 で残存していた既知脆弱性（`requests` の CVE-2026-25645、`urllib3` の CVE-2026-44431 / CVE-2026-44432）を、サポートを 3.10+ に統一することで完全に解消。`SECURITY.md` の残存リスク記載を更新。
+
 ## [0.2.0] - 2026-06-04
 
 ### 追加
@@ -85,6 +94,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Changes for the next release will be documented here
+
+## [0.3.0] - 2026-06-04
+
+### Changed (Breaking)
+- **Dropped support for Python 3.8 / 3.9**; raised `requires-python` to `>=3.10`. Use `0.2.x` if you need 3.8 / 3.9.
+- Removed environment markers from the dependency declaration and require fixed versions directly: `requests>=2.33.0` and `urllib3>=2.7.0` (both require Python 3.10+). Removed 3.8 / 3.9 classifiers. CI matrix changed to 3.10–3.12.
+
+### Security
+- Fully resolved the vulnerabilities that remained on Python 3.8 / 3.9 (`requests` CVE-2026-25645; `urllib3` CVE-2026-44431 / CVE-2026-44432) by standardizing on Python 3.10+. Updated the residual-risk notes in `SECURITY.md`.
 
 ## [0.2.0] - 2026-06-04
 

@@ -7,21 +7,17 @@ name = "relation-client"
 dynamic = ["version"]
 description = "Re:lation API Python クライアントライブラリ"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "solah soyalp", email = "solah.soyalp@gmail.com" },
 ]
 dependencies = [
-    # requests のセキュリティ方針は SECURITY.md を参照。
-    # Python 3.10+ は 2.33.0 以上（CVE-2026-25645 / CVE-2024-35195 を回避）。
-    # 3.8/3.9 は 2.33.0 が 3.10+ 必須のため、動作可能な最新（2.32.4 以上）を要求。
-    "requests>=2.33.0; python_version >= '3.10'",
-    "requests>=2.32.4; python_version < '3.10'",
-    # urllib3（requests の推移的依存）の既知脆弱性対策（詳細は SECURITY.md 参照）。
-    # Python 3.10+ は 2.7.0 以上（CVE-2026-44431 / CVE-2026-44432 を回避）。
-    # 3.8/3.9 は 2.7.0 が 3.10+ 必須のため導入不可（残存リスクは SECURITY.md 参照）。
-    "urllib3>=2.7.0; python_version >= '3.10'",
+    # 既知脆弱性の修正版を直接要求（詳細は SECURITY.md 参照）。
+    # requests>=2.33.0: CVE-2026-25645 / CVE-2024-35195 を回避
+    # urllib3>=2.7.0: CVE-2026-44431 / CVE-2026-44432 を回避（いずれも Python 3.10+ 必須）
+    "requests>=2.33.0",
+    "urllib3>=2.7.0",
     "pytz",
 ]
 classifiers = [
@@ -29,8 +25,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
