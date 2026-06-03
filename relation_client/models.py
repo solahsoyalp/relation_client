@@ -4,7 +4,7 @@ Re:lation APIデータモデルモジュール
 このモジュールは、Re:lation APIから返されるデータオブジェクトのモデルクラスを定義します。
 """
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -89,7 +89,7 @@ class Customer(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Customer':
         """辞書からCustomerオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.customer_id = data.get('customer_id')
         instance.last_name = data.get('last_name')
         instance.first_name = data.get('first_name')
@@ -102,23 +102,23 @@ class Customer(RelationObject):
         instance.system_id1 = data.get('system_id1')
         instance.default_assignee = data.get('default_assignee')
         instance.default_assignee_id = data.get('default_assignee_id')
-        
+
         # メールアドレス
-        instance.emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email) 
+        instance.emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email)
                            for email in data.get('emails', [])]
-        
+
         # アーカイブメールアドレス
-        instance.archived_emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email) 
+        instance.archived_emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email)
                                     for email in data.get('archived_emails', [])]
-        
+
         # 電話番号
-        instance.tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel) 
+        instance.tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel)
                          for tel in data.get('tels', [])]
-        
+
         # アーカイブ電話番号
-        instance.archived_tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel) 
+        instance.archived_tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel)
                                   for tel in data.get('archived_tels', [])]
-        
+
         # バッジID
         instance.badge_ids = data.get('badge_ids', [])
 
@@ -140,7 +140,7 @@ class CustomerGroup(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'CustomerGroup':
         """辞書からCustomerGroupオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.customer_group_id = data.get('customer_group_id')
         instance.name = data.get('name')
         instance.message_box_ids = data.get('message_box_ids', [])
@@ -163,7 +163,7 @@ class Comment(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Comment':
         """辞書からCommentオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.commenter = data.get('commenter')
         instance.comment_type = data.get('comment_type')
         instance.comment = data.get('comment')
@@ -184,10 +184,10 @@ class Attachment(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Attachment':
         """辞書からAttachmentオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.attachment_id = data.get('attachment_id')
         instance.file_name = data.get('file_name')
-                
+
         return instance
 
 
@@ -241,7 +241,7 @@ class Message(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Message':
         """辞書からMessageオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.message_id = data.get('message_id')
         instance.from_address = data.get('from')  # fromはPython予約語なのでfrom_addressに変更
         instance.to = data.get('to')
@@ -265,7 +265,7 @@ class Message(RelationObject):
 
         # コメント
         instance.comments = [Comment.from_dict(comment) for comment in data.get('comments', [])]
-        
+
         # 添付ファイル
         instance.attachments = [Attachment.from_dict(attachment) for attachment in data.get('attachments', [])]
 
@@ -296,7 +296,7 @@ class Ticket(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Ticket':
         """辞書からTicketオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.ticket_id = data.get('ticket_id')
         instance.assignee = data.get('assignee')
         instance.status_cd = data.get('status_cd')
@@ -315,7 +315,7 @@ class Ticket(RelationObject):
         # メッセージ
         if 'messages' in data:
             instance.messages = [Message.from_dict(message) for message in data.get('messages', [])]
-                
+
         return instance
 
 
@@ -330,12 +330,12 @@ class ChatConversation(RelationObject):
     note: Optional[str] = None
     file_name: Optional[str] = None
     auto_send: Optional[bool] = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatConversation':
         """辞書からChatConversationオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.action_cd = data.get('action_cd')
         instance.speaker_name = data.get('speaker_name')
         instance.sent_by = data.get('sent_by')
@@ -354,7 +354,7 @@ class ChatConversation(RelationObject):
 class ChatPlusConversation(ChatConversation):
     """ChatPlus会話"""
     chatplus_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatPlusConversation':
         """辞書からChatPlusConversationオブジェクトを作成"""
@@ -367,7 +367,7 @@ class ChatPlusConversation(ChatConversation):
 class YahooConversation(ChatConversation):
     """Yahoo!ショッピング会話"""
     yahoo_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'YahooConversation':
         """辞書からYahooConversationオブジェクトを作成"""
@@ -380,7 +380,7 @@ class YahooConversation(ChatConversation):
 class RMesseConversation(ChatConversation):
     """R-Messe会話"""
     r_messe_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RMesseConversation':
         """辞書からRMesseConversationオブジェクトを作成"""
@@ -393,7 +393,7 @@ class RMesseConversation(ChatConversation):
 class LineConversation(ChatConversation):
     """LINE会話"""
     line_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'LineConversation':
         """辞書からLineConversationオブジェクトを作成"""
@@ -411,22 +411,22 @@ class ChatPlus(RelationObject):
     company_name: str = None
     site: str = None
     conversations: List[ChatPlusConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatPlus':
         """辞書からChatPlusオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.account_key = data.get('account_key')
         instance.email = data.get('email')
         instance.company_name = data.get('company_name')
         instance.site = data.get('site')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [ChatPlusConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -444,12 +444,12 @@ class Yahoo(RelationObject):
     item_number: str = None
     item_url: str = None
     conversations: List[YahooConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Yahoo':
         """辞書からYahooオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.store_account = data.get('store_account')
         instance.email = data.get('email')
@@ -460,11 +460,11 @@ class Yahoo(RelationObject):
         instance.order_url = data.get('order_url')
         instance.item_number = data.get('item_number')
         instance.item_url = data.get('item_url')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [YahooConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -503,11 +503,11 @@ class RMesse(RelationObject):
         instance.item_url = data.get('item_url')
         # ソーシャルギフトのユーザー種別（"注文者" / "受取人" / None）
         instance.social_gift_user_type = data.get('social_gift_user_type')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [RMesseConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -518,20 +518,20 @@ class Line(RelationObject):
     channel_id: str = None
     group_name: str = None
     conversations: List[LineConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Line':
         """辞書からLineオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.channel_id = data.get('channel_id')
         instance.group_name = data.get('group_name')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [LineConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -548,7 +548,7 @@ class MessageBox(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'MessageBox':
         """辞書からMessageBoxオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.message_box_id = data.get('message_box_id')
         instance.name = data.get('name')
         instance.color = data.get('color')
@@ -572,13 +572,13 @@ class PendingReason(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'PendingReason':
         """辞書からPendingReasonオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.pending_reason_id = data.get('pending_reason_id')
         instance.name = data.get('name')
         instance.is_snoozed = data.get('is_snoozed', False)
         instance.snooze_term = data.get('snooze_term')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -599,7 +599,7 @@ class User(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'User':
         """辞書からUserオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.mention_name = data.get('mention_name')
         instance.status_cd = data.get('status_cd')
         instance.first_name = data.get('first_name')
@@ -628,13 +628,13 @@ class CaseCategory(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'CaseCategory':
         """辞書からCaseCategoryオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.case_category_id = data.get('case_category_id')
         instance.name = data.get('name')
         instance.parent_id = data.get('parent_id')
         instance.archived = data.get('archived', False)
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -649,13 +649,13 @@ class Label(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Label':
         """辞書からLabelオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.label_id = data.get('label_id')
         instance.name = data.get('name')
         instance.color = data.get('color')
         instance.parent_id = data.get('parent_id')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -668,11 +668,11 @@ class Badge(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Badge':
         """辞書からBadgeオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.badge_id = data.get('badge_id')
         instance.name = data.get('name')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -686,11 +686,11 @@ class MailAccount(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'MailAccount':
         """辞書からMailAccountオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.mail_account_id = data.get('mail_account_id')
         instance.name = data.get('name')
         instance.email = data.get('email')
-                
+
         return instance
 
 

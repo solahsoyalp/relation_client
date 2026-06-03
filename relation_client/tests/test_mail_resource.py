@@ -3,7 +3,6 @@ MailResourceクラスのテスト
 
 このモジュールは、MailResourceクラスの各メソッドをテストします。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -22,7 +21,7 @@ class TestMailResource:
             "message_id": 111,
             "ticket_id": 222
         }
-        
+
         return client
 
     @pytest.fixture
@@ -58,7 +57,7 @@ class TestMailResource:
             "bcc": "bcc@example.com",
             "pending_reason_id": 10
         })
-        
+
         assert result == {
             "message_id": 111,
             "ticket_id": 222
@@ -84,7 +83,7 @@ class TestMailResource:
             "body": "これはテストメールです。",
             "is_html": False
         })
-        
+
         assert result == {
             "message_id": 111,
             "ticket_id": 222
@@ -120,7 +119,7 @@ class TestMailResource:
             "bcc": "bcc@example.com",
             "pending_reason_id": 10
         })
-        
+
         assert result == {
             "message_id": 111,
             "ticket_id": 222
@@ -156,7 +155,7 @@ class TestMailResource:
             "bcc": "bcc@example.com",
             "pending_reason_id": 10
         })
-        
+
         assert result == {
             "message_id": 111,
             "ticket_id": 222
@@ -182,8 +181,8 @@ class TestMailResource:
             "body": "これは新規下書きです。",
             "is_html": False
         })
-        
+
         assert result == {
             "message_id": 111,
             "ticket_id": 222
-        } 
+        }

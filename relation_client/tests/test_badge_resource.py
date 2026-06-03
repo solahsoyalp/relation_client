@@ -3,7 +3,6 @@
 
 このモジュールは、BadgeResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -33,7 +32,7 @@ class TestBadgeResource:
                 "name": "新規顧客"
             }
         ]
-        
+
         return client
 
     @pytest.fixture
@@ -51,15 +50,15 @@ class TestBadgeResource:
         assert isinstance(result, list)
         assert len(result) == 3
         assert isinstance(result[0], Badge)
-        
+
         # 1番目のバッジを検証
         assert result[0].badge_id == 1
         assert result[0].name == "VIP"
-        
+
         # 2番目のバッジを検証
         assert result[1].badge_id == 2
         assert result[1].name == "要注意"
-        
+
         # 3番目のバッジを検証
         assert result[2].badge_id == 3
         assert result[2].name == "新規顧客"
@@ -72,4 +71,4 @@ class TestBadgeResource:
         # 検証
         client_mock.get.assert_called_once_with('customer_groups/123/badges', params={})
         assert isinstance(result, list)
-        assert len(result) == 3 
+        assert len(result) == 3

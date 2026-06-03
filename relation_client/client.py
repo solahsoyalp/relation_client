@@ -4,9 +4,8 @@ Re:lation APIクライアント
 このモジュールは、Re:lation APIとの通信を処理するメインクライアントクラスを提供します。
 """
 
-import json
 import time
-from typing import Dict, Any, Optional, Union, List, Type, TypeVar
+from typing import Dict, Any, Optional
 
 import requests
 
@@ -69,7 +68,7 @@ class RelationClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        
+
         self._session = requests.Session()
         # 直近のレスポンスから取得したレートリミット情報を保持する
         self.last_rate_limit: Optional[Dict[str, Optional[int]]] = None
@@ -77,7 +76,7 @@ class RelationClient:
             subdomain=self.subdomain,
             api_version=self.api_version
         )
-        
+
         # リソースの初期化
         self.customers = CustomerResource(self)
         self.customer_groups = CustomerGroupResource(self)
@@ -93,7 +92,7 @@ class RelationClient:
         self.mails = MailResource(self)
         self.templates = TemplateResource(self)
         self.attachments = AttachmentResource(self)
-        
+
     def request(
         self,
         method: str,
@@ -160,10 +159,10 @@ class RelationClient:
                         return response.json()
                     except ValueError:
                         return {"data": response.text}
-                
+
                 # エラーレスポンスの処理
                 error_message = self._extract_error_message(response)
-                
+
                 if response.status_code == HTTP_UNAUTHORIZED:
                     raise AuthenticationError(error_message, response)
                 elif response.status_code == HTTP_FORBIDDEN:
@@ -191,7 +190,7 @@ class RelationClient:
                     raise ServiceUnavailableError(error_message, response)
                 else:
                     raise APIError(f"予期しないステータスコード: {response.status_code}", response)
-                
+
             except (requests.ConnectionError, requests.Timeout) as e:
                 # 接続エラーやタイムアウトのリトライ。
                 # 非冪等なメソッド (POST, PUT) は副作用の重複を避けるため即座に例外を送出する。
@@ -200,10 +199,10 @@ class RelationClient:
                     retry_count += 1
                     continue
                 raise APIError(f"接続エラー: {str(e)}")
-                
+
         # ここに到達することはないはず
         raise APIError("予期しないエラー: 最大リトライ回数を超えました")
-    
+
     def _extract_error_message(self, response: requests.Response) -> str:
         """レスポンスからエラーメッセージを抽出"""
         try:
@@ -216,7 +215,7 @@ class RelationClient:
             return str(error_data)
         except (ValueError, KeyError):
             return response.text or f"HTTPエラー {response.status_code}"
-            
+
     def _update_rate_limit(self, response: requests.Response) -> None:
         """レスポンスヘッダからレートリミット情報を解析し self.last_rate_limit に保持する
 
@@ -244,15 +243,15 @@ class RelationClient:
     def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """GETリクエストを実行"""
         return self.request('GET', path, params=params)
-        
+
     def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """POSTリクエストを実行"""
         return self.request('POST', path, json_data=data)
-        
+
     def put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """PUTリクエストを実行"""
         return self.request('PUT', path, json_data=data)
-        
+
     def delete(self, path: str) -> Dict[str, Any]:
         """DELETEリクエストを実行"""
         return self.request('DELETE', path)

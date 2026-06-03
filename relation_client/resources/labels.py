@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのラベルリソースへのアクセスを提供します。
 """
-from typing import List, Dict, Any, Optional, Iterator
+from typing import List, Dict, Optional, Iterator
 
 from ..models import Label
 
@@ -36,10 +36,10 @@ class LabelResource:
             params['per_page'] = per_page
         if page is not None:
             params['page'] = page
-        
+
         # APIリクエスト
         response = self.client.get(f'{message_box_id}/labels', params=params)
-        
+
         # レスポンスをラベルオブジェクトのリストに変換
         if isinstance(response, list):
             return [Label.from_dict(label_data) for label_data in response]
@@ -91,11 +91,11 @@ class LabelResource:
         }
         if parent_id is not None:
             data['parent_id'] = parent_id
-        
+
         # APIリクエスト
         return self.client.post(f'{message_box_id}/labels', data=data)
-    
-    def update(self, message_box_id: int, label_id: int, name: Optional[str] = None, 
+
+    def update(self, message_box_id: int, label_id: int, name: Optional[str] = None,
                color: Optional[str] = None, parent_id: Optional[int] = None) -> None:
         """ラベルを更新
 
@@ -114,6 +114,6 @@ class LabelResource:
             data['color'] = color
         if parent_id is not None:
             data['parent_id'] = parent_id
-        
+
         # APIリクエスト
-        self.client.put(f'{message_box_id}/labels/{label_id}', data=data) 
+        self.client.put(f'{message_box_id}/labels/{label_id}', data=data)

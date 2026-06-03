@@ -30,4 +30,4 @@ class AttachmentResource:
                 - file_name: ファイル名
                 - expires_in_sec: 有効期限（秒）
         """
-        return self.client.get(f'{message_box_id}/messages/attachments/{attachment_id}') 
+        return self.client.get(f'{message_box_id}/messages/attachments/{attachment_id}')

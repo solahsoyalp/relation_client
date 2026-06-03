@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIの送信メール設定リソースへのアクセスを提供します。
 """
-from typing import List, Dict, Any, Optional, Iterator
+from typing import List, Optional, Iterator
 
 from ..models import MailAccount
 
@@ -36,10 +36,10 @@ class MailAccountResource:
             params['per_page'] = per_page
         if page is not None:
             params['page'] = page
-        
+
         # APIリクエスト
         response = self.client.get(f'{message_box_id}/mail_accounts', params=params)
-        
+
         # レスポンスを送信メール設定オブジェクトのリストに変換
         if isinstance(response, list):
             return [MailAccount.from_dict(mail_account_data) for mail_account_data in response]

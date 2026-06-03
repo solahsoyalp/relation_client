@@ -4,7 +4,7 @@
 このモジュールは、Re:lation APIのアドレス帳 (customer_group) リソースに対応するクラスを提供します。
 """
 
-from typing import Dict, Any, List, Optional, Union
+from typing import List
 
 from ..models import CustomerGroup
 
@@ -31,10 +31,10 @@ class CustomerGroupResource:
         """
         # APIリクエスト実行
         response = self.client.get('customer_groups')
-        
+
         # レスポンスからCustomerGroupオブジェクトのリストを作成
         customer_groups = []
         for customer_group_data in response:
             customer_groups.append(CustomerGroup.from_dict(customer_group_data))
-            
-        return customer_groups 
+
+        return customer_groups

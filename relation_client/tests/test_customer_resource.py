@@ -3,7 +3,7 @@ CustomerResourceのテスト
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from relation_client import RelationClient
 from relation_client.models import Customer
@@ -239,4 +239,4 @@ class TestCustomerResource(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

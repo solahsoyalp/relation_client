@@ -3,7 +3,6 @@
 
 このモジュールは、MessageBoxResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -81,4 +80,4 @@ class TestMessageBoxResource:
         assert result.message_box_id == 1
         assert result.name == "受信箱1"
         assert result.color == "green"
-        assert result.customer_group_id == 1 
+        assert result.customer_group_id == 1

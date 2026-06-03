@@ -3,7 +3,6 @@
 
 このモジュールは、PendingReasonResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -69,4 +68,4 @@ class TestPendingReasonResource:
         assert result[2].pending_reason_id == 3
         assert result[2].name == "翌日連絡"
         assert result[2].is_snoozed is True
-        assert result[2].snooze_term == "tomorrow" 
+        assert result[2].snooze_term == "tomorrow"

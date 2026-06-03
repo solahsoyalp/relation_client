@@ -3,31 +3,30 @@
 
 このモジュールは、Re:lation APIのチケット関連操作を処理するリソースクラスを提供します。
 """
-from typing import List, Dict, Any, Optional, Union, Iterator
+from typing import List, Dict, Optional, Iterator
 
-from ..models import Ticket, Message
+from ..models import Ticket
 from ..constants import (
-    STATUS_OPEN, STATUS_ONGOING, STATUS_CLOSED, STATUS_UNWANTED, STATUS_TRASH, STATUS_SPAM,
-    METHOD_RECORD, ICON_RECEIVED_PHONE
+    STATUS_CLOSED, ICON_RECEIVED_PHONE
 )
 
 
 class TicketResource:
     """チケットリソースクラス
-    
+
     このクラスは、チケット関連のAPIエンドポイントへのアクセスを提供します。
     """
-    
+
     def __init__(self, client):
         """初期化
-        
+
         Args:
             client: APIクライアントインスタンス
         """
         self.client = client
-        
+
     def search(
-        self, 
+        self,
         message_box_id: int,
         ticket_ids: Optional[List[int]] = None,
         label_ids: Optional[List[int]] = None,
@@ -47,7 +46,7 @@ class TicketResource:
         page: int = 1
     ) -> List[Ticket]:
         """チケットを検索します。
-        
+
         Args:
             message_box_id: 受信箱ID
             ticket_ids: チケットIDリスト
@@ -66,12 +65,12 @@ class TicketResource:
             pending_reason_ids: 保留理由IDリスト
             per_page: 1ページあたりの表示件数（最大50）
             page: ページ番号
-            
+
         Returns:
             チケットのリスト
         """
         path = f"{message_box_id}/tickets/search"
-        
+
         # リクエストパラメータを構築
         data = {}
         if ticket_ids:
@@ -106,10 +105,10 @@ class TicketResource:
             data["per_page"] = per_page
         if page:
             data["page"] = page
-            
+
         # API呼び出し
         response = self.client.post(path, data=data)
-        
+
         # レスポンスをTicketオブジェクトのリストに変換
         return [Ticket.from_dict(ticket_data) for ticket_data in response]
 
@@ -191,25 +190,25 @@ class TicketResource:
 
     def get(self, message_box_id: int, ticket_id: int) -> Ticket:
         """チケットを取得します。
-        
+
         Args:
             message_box_id: 受信箱ID
             ticket_id: チケットID
-            
+
         Returns:
             チケット
         """
         path = f"{message_box_id}/tickets/{ticket_id}"
-        
+
         # API呼び出し
         response = self.client.get(path)
-        
+
         # レスポンスをTicketオブジェクトに変換
         return Ticket.from_dict(response)
-    
+
     def update(
-        self, 
-        message_box_id: int, 
+        self,
+        message_box_id: int,
         ticket_id: int,
         status_cd: Optional[str] = None,
         pending_reason_id: Optional[int] = None,
@@ -225,7 +224,7 @@ class TicketResource:
         case_category_ids: Optional[List[int]] = None
     ) -> None:
         """チケットを更新します。
-        
+
         Args:
             message_box_id: 受信箱ID
             ticket_id: チケットID
@@ -243,7 +242,7 @@ class TicketResource:
             case_category_ids: チケット分類IDのリスト（空リストで解除）
         """
         path = f"{message_box_id}/tickets/{ticket_id}"
-        
+
         # リクエストパラメータを構築
         data = {}
         if status_cd is not None:
@@ -270,10 +269,10 @@ class TicketResource:
             data["color_cd"] = color_cd
         if case_category_ids is not None:
             data["case_category_ids"] = case_category_ids
-            
+
         # API呼び出し
         self.client.put(path, data=data)
-        
+
     def create_record(
         self,
         message_box_id: int,
@@ -291,7 +290,7 @@ class TicketResource:
         assignee: Optional[str] = None
     ) -> Dict[str, int]:
         """応対メモを作成します。
-        
+
         Args:
             message_box_id: 受信箱ID
             subject: 件名
@@ -306,12 +305,12 @@ class TicketResource:
             icon_cd: 応対種別（省略時はreceived_phone）
             is_html: HTMLかどうか（省略時はfalse）
             assignee: 新規チケットとして登録された場合の担当者のメンション名
-            
+
         Returns:
             {"message_id": メッセージID, "ticket_id": チケットID}
         """
         path = f"{message_box_id}/records"
-        
+
         # リクエストパラメータを構築
         data = {
             "subject": subject,
@@ -319,7 +318,7 @@ class TicketResource:
             "duration": duration,
             "body": body
         }
-        
+
         if ticket_id is not None:
             data["ticket_id"] = ticket_id
         if status_cd is not None:
@@ -336,8 +335,8 @@ class TicketResource:
             data["is_html"] = is_html
         if assignee is not None:
             data["assignee"] = assignee
-            
+
         # API呼び出し
         response = self.client.post(path, data=data)
-        
-        return response 
+
+        return response

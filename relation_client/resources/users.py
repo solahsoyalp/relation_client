@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのユーザーに関連するリソースクラスを提供します。
 """
-from typing import List, Dict, Optional, Any, Iterator
+from typing import List, Optional, Iterator
 
 from ..models import User
 
@@ -62,4 +62,4 @@ class UserResource:
             for user in users:
                 yield user
             if len(users) < page_size:
-                break 
+                break

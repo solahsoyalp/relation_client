@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのチケット分類に関連するリソースクラスを提供します。
 """
-from typing import List, Dict, Optional, Any, Iterator
+from typing import List, Dict, Optional, Iterator
 
 from ..models import CaseCategory
 
@@ -85,8 +85,8 @@ class CaseCategoryResource:
 
         return self.client.post(f'{message_box_id}/case_categories', data=data)
 
-    def update(self, message_box_id: int, case_category_id: int, name: Optional[str] = None, 
-              parent_id: Optional[int] = None, archived: Optional[bool] = None) -> None:
+    def update(self, message_box_id: int, case_category_id: int, name: Optional[str] = None,
+               parent_id: Optional[int] = None, archived: Optional[bool] = None) -> None:
         """チケット分類を更新
 
         Args:
@@ -95,7 +95,7 @@ class CaseCategoryResource:
             name: チケット分類名
             parent_id: 親チケット分類ID
             archived: アーカイブするかどうか
-            
+
         Note:
             - 更新するチケット分類に子チケット分類や孫チケット分類が存在する場合、それらもアーカイブされます。
             - 親チケット分類がアーカイブされている場合、その分類は復活できません。
@@ -109,4 +109,4 @@ class CaseCategoryResource:
             data['archived'] = archived
 
         path = f'{message_box_id}/case_categories/{case_category_id}'
-        self.client.put(path, data=data) 
+        self.client.put(path, data=data)

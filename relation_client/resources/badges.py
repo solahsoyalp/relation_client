@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのバッジリソースへのアクセスを提供します。
 """
-from typing import List, Dict, Any, Optional, Iterator
+from typing import List, Optional, Iterator
 
 from ..models import Badge
 
@@ -36,10 +36,10 @@ class BadgeResource:
             params['per_page'] = per_page
         if page is not None:
             params['page'] = page
-        
+
         # APIリクエスト
         response = self.client.get(f'customer_groups/{customer_group_id}/badges', params=params)
-        
+
         # レスポンスをバッジオブジェクトのリストに変換
         if isinstance(response, list):
             return [Badge.from_dict(badge_data) for badge_data in response]

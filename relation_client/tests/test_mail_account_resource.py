@@ -3,12 +3,12 @@ MailAccountResourceクラスのテスト
 
 このモジュールは、MailAccountResourceクラスの各メソッドをテストします。
 """
-import json
 import pytest
 from unittest import mock
 
 from relation_client.models import MailAccount
 from relation_client.resources.mail_accounts import MailAccountResource
+
 
 class TestMailAccountResource:
     """MailAccountResourceクラスのテスト"""
@@ -30,7 +30,7 @@ class TestMailAccountResource:
                 "email": "info2@example.com"
             }
         ]
-        
+
         return client
 
     @pytest.fixture
@@ -48,12 +48,12 @@ class TestMailAccountResource:
         assert isinstance(result, list)
         assert len(result) == 2
         assert isinstance(result[0], MailAccount)
-        
+
         # 1番目のメールアカウントを検証
         assert result[0].mail_account_id == 1
         assert result[0].name == "カスタマーサポートセンター"
         assert result[0].email == "info1@example.com"
-        
+
         # 2番目のメールアカウントを検証
         assert result[1].mail_account_id == 2
         assert result[1].name == "株式会社xxx"

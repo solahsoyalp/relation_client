@@ -16,12 +16,10 @@ class RelationError(Exception):
 
 class AuthenticationError(RelationError):
     """認証エラー (HTTP 401)"""
-    pass
 
 
 class RelationPermissionError(RelationError):
     """権限エラー (HTTP 403)"""
-    pass
 
 
 # 後方互換性のためのエイリアス（旧名 PermissionError を維持）
@@ -30,24 +28,19 @@ PermissionError = RelationPermissionError
 
 class ResourceNotFoundError(RelationError):
     """リソースが見つからないエラー (HTTP 404)"""
-    pass
 
 
 class RateLimitError(RelationError):
     """レートリミットエラー (HTTP 429)"""
-    pass
 
 
 class InvalidRequestError(RelationError):
     """無効なリクエストエラー (HTTP 400, 415)"""
-    pass
 
 
 class APIError(RelationError):
     """APIエラー (HTTP 500)"""
-    pass
 
 
 class ServiceUnavailableError(RelationError):
     """サービス利用不可エラー (HTTP 503)"""
-    pass 

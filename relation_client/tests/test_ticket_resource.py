@@ -3,7 +3,6 @@
 
 このモジュールは、TicketResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 

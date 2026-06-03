@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのテンプレートリソースへのアクセスを提供します。
 """
-from typing import List, Dict, Any, Optional, Iterator
+from typing import List, Optional, Iterator
 
 from ..models import Template
 
@@ -36,10 +36,10 @@ class TemplateResource:
             params['per_page'] = per_page
         if page is not None:
             params['page'] = page
-        
+
         # APIリクエスト
         response = self.client.get(f'{message_box_id}/templates', params=params)
-        
+
         # レスポンスをテンプレートオブジェクトのリストに変換
         if isinstance(response, list):
             return [Template.from_dict(template_data) for template_data in response]
@@ -86,11 +86,11 @@ class TemplateResource:
         data = {}
         if template_category_name:
             data['template_category_name'] = template_category_name
-        
+
         # APIリクエスト
         response = self.client.post(f'{message_box_id}/templates/search', data=data)
-        
+
         # レスポンスをテンプレートオブジェクトのリストに変換
         if isinstance(response, list):
             return [Template.from_dict(template_data) for template_data in response]
-        return [] 
+        return []

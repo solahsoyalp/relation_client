@@ -4,7 +4,7 @@
 このモジュールは、Re:lation APIのコンタクト (customer) リソースに対応するクラスを提供します。
 """
 
-from typing import Dict, Any, List, Optional, Union, cast, Iterator
+from typing import Dict, Any, List, Optional, Iterator
 
 from ..models import Customer
 
@@ -474,4 +474,4 @@ class CustomerResource:
         # APIリクエスト実行
         self.client.delete(
             f'customer_groups/{customer_group_id}/customers/email/{email}'
-        ) 
+        )

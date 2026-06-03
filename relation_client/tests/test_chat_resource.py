@@ -3,7 +3,6 @@
 
 このモジュールは、ChatResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -223,4 +222,4 @@ class TestChatResource:
         assert result.conversations[0].note == "こんにちは"
         assert result.conversations[1].line_conversation_id == 2
         assert result.conversations[1].conversation_type == "sticker"
-        assert result.conversations[1].note == "スタンプを送信しました" 
+        assert result.conversations[1].note == "スタンプを送信しました"

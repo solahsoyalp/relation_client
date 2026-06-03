@@ -29,7 +29,7 @@ HTTP_SERVICE_UNAVAILABLE = 503
 # 性別コード
 GENDER_MALE = 1
 GENDER_FEMALE = 2
-GENDER_UNKNOWN = 9 
+GENDER_UNKNOWN = 9
 
 # チケットステータス
 STATUS_OPEN = 'open'  # 未対応
@@ -116,4 +116,4 @@ SNOOZE_AFTER_MONTH = 'after_month'  # 1ヶ月後の8時
 USER_STATUS_AVAILABLE = 'available'  # 有効
 USER_STATUS_CONFIRMING = 'confirming'  # 本登録処理中
 USER_STATUS_LOCKED = 'locked'  # アカウントロック中
-USER_STATUS_DELETED = 'deleted'  # 削除済み 
+USER_STATUS_DELETED = 'deleted'  # 削除済み
