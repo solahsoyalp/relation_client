@@ -19,9 +19,13 @@ class AuthenticationError(RelationError):
     pass
 
 
-class PermissionError(RelationError):
+class RelationPermissionError(RelationError):
     """権限エラー (HTTP 403)"""
     pass
+
+
+# 後方互換性のためのエイリアス（旧名 PermissionError を維持）
+PermissionError = RelationPermissionError
 
 
 class ResourceNotFoundError(RelationError):

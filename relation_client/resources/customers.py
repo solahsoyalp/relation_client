@@ -4,7 +4,7 @@
 このモジュールは、Re:lation APIのコンタクト (customer) リソースに対応するクラスを提供します。
 """
 
-from typing import Dict, Any, List, Optional, Union, cast
+from typing import Dict, Any, List, Optional, Union, cast, Iterator
 
 from ..models import Customer
 
@@ -86,6 +86,61 @@ class CustomerResource:
             customers.append(Customer.from_dict(customer_data))
 
         return customers
+
+    def iter_all(
+        self,
+        customer_group_id: int,
+        customer_ids: Optional[List[int]] = None,
+        gender_cds: Optional[List[int]] = None,
+        system_id1s: Optional[List[str]] = None,
+        default_assignees: Optional[List[str]] = None,
+        emails: Optional[List[str]] = None,
+        tels: Optional[List[str]] = None,
+        badge_ids: Optional[List[int]] = None,
+        per_page: int = 10
+    ) -> Iterator[Customer]:
+        """全ページの顧客を透過的に取得します
+
+        ページングを意識せずに、検索条件に一致するすべての顧客を
+        順番に列挙するジェネレータです。内部で ``search`` を
+        ``page=1`` から呼び出し、各ページの ``Customer`` を逐次 yield します。
+        取得件数が ``per_page`` 未満（または0件）になったページを
+        最終ページとみなして停止します。
+
+        Args:
+            customer_group_id: アドレス帳ID
+            customer_ids: 顧客IDの配列
+            gender_cds: 性別コードの配列 (1: 男性, 2: 女性, 9: 不明)
+            system_id1s: 顧客コードの配列
+            default_assignees: 担当者のメンション名の配列
+            emails: メールアドレスの配列（部分一致検索対応）
+            tels: 電話番号の配列（部分一致検索対応）
+            badge_ids: バッジIDの配列
+            per_page: ページごとの件数 (1-50)
+
+        Yields:
+            Customer オブジェクト
+        """
+        # 無限ループに対する安全弁（通常運用では到達しない十分大きな上限）
+        max_pages = 1000
+        for page in range(1, max_pages + 1):
+            customers = self.search(
+                customer_group_id=customer_group_id,
+                customer_ids=customer_ids,
+                gender_cds=gender_cds,
+                system_id1s=system_id1s,
+                default_assignees=default_assignees,
+                emails=emails,
+                tels=tels,
+                badge_ids=badge_ids,
+                per_page=per_page,
+                page=page
+            )
+            for customer in customers:
+                yield customer
+            # 0件、または per_page 未満なら最終ページ
+            if len(customers) < per_page:
+                break
 
     def create(
         self,

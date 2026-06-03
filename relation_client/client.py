@@ -18,7 +18,7 @@ from .constants import (
     HTTP_SERVICE_UNAVAILABLE
 )
 from .exceptions import (
-    AuthenticationError, PermissionError, ResourceNotFoundError,
+    AuthenticationError, RelationPermissionError, ResourceNotFoundError,
     RateLimitError, InvalidRequestError, APIError, ServiceUnavailableError
 )
 from .resources.customers import CustomerResource
@@ -71,6 +71,8 @@ class RelationClient:
         self.retry_delay = retry_delay
         
         self._session = requests.Session()
+        # 直近のレスポンスから取得したレートリミット情報を保持する
+        self.last_rate_limit: Optional[Dict[str, Optional[int]]] = None
         self._base_url = BASE_URL_FORMAT.format(
             subdomain=self.subdomain,
             api_version=self.api_version
@@ -145,7 +147,10 @@ class RelationClient:
                     json=json_data,
                     timeout=self.timeout
                 )
-                
+
+                # レスポンスヘッダからレートリミット情報を解析して保持する
+                self._update_rate_limit(response)
+
                 # レスポンスを処理
                 if response.status_code < 400:
                     # 成功レスポンス
@@ -162,7 +167,7 @@ class RelationClient:
                 if response.status_code == HTTP_UNAUTHORIZED:
                     raise AuthenticationError(error_message, response)
                 elif response.status_code == HTTP_FORBIDDEN:
-                    raise PermissionError(error_message, response)
+                    raise RelationPermissionError(error_message, response)
                 elif response.status_code == HTTP_NOT_FOUND:
                     raise ResourceNotFoundError(error_message, response)
                 elif response.status_code == HTTP_TOO_MANY_REQUESTS:
@@ -212,6 +217,30 @@ class RelationClient:
         except (ValueError, KeyError):
             return response.text or f"HTTPエラー {response.status_code}"
             
+    def _update_rate_limit(self, response: requests.Response) -> None:
+        """レスポンスヘッダからレートリミット情報を解析し self.last_rate_limit に保持する
+
+        ヘッダが存在しない、または整数に変換できない場合は None を設定する。
+        この処理は決して例外を送出しない。
+        """
+        def _parse(name: str) -> Optional[int]:
+            try:
+                value = response.headers.get(name)
+            except Exception:
+                return None
+            if value is None:
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        self.last_rate_limit = {
+            "limit": _parse(RATE_LIMIT_LIMIT),
+            "remaining": _parse(RATE_LIMIT_REMAINING),
+            "reset": _parse(RATE_LIMIT_RESET),
+        }
+
     def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """GETリクエストを実行"""
         return self.request('GET', path, params=params)
@@ -226,4 +255,16 @@ class RelationClient:
         
     def delete(self, path: str) -> Dict[str, Any]:
         """DELETEリクエストを実行"""
-        return self.request('DELETE', path) 
+        return self.request('DELETE', path)
+
+    def close(self) -> None:
+        """内部のHTTPセッションをクローズする"""
+        self._session.close()
+
+    def __enter__(self) -> "RelationClient":
+        """コンテキストマネージャーとして利用するための入口（自身を返す）"""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        """コンテキスト終了時にセッションをクローズする"""
+        self.close()

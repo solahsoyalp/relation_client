@@ -7,6 +7,13 @@ Re:lationのAPIを簡単に利用するためのPythonライブラリです。
 __version__ = '0.1.0'
 
 from .client import RelationClient  # noqa
+from .exceptions import (
+    RelationError, AuthenticationError, RelationPermissionError,
+    ResourceNotFoundError, RateLimitError, InvalidRequestError,
+    APIError, ServiceUnavailableError,
+    # 後方互換性のためのエイリアス
+    PermissionError,
+)
 from .models import (
     Customer, CustomerGroup, Email, Tel,
     Ticket, Message, Record, Comment, Attachment,

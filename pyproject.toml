@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "relation-client"
+dynamic = ["version"]
+description = "Re:lation API Python クライアントライブラリ"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "solah soyalp", email = "solah.soyalp@gmail.com" },
+]
+dependencies = [
+    "requests>=2.25.0",
+    "pytz",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/solahsoyalp/relation_client"
+"Bug Reports" = "https://github.com/solahsoyalp/relation_client/issues"
+Source = "https://github.com/solahsoyalp/relation_client"
+
+[tool.setuptools.dynamic]
+version = { attr = "relation_client.__version__" }
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
+
+[tool.setuptools.package-data]
+relation_client = ["py.typed"]

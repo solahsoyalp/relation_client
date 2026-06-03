@@ -74,6 +74,78 @@ class TestTicketResource:
         assert result[1].status_cd == "ongoing"
         assert result[1].color_cd == "blue"
 
+    def test_iter_all(self, ticket_resource, client_mock):
+        """iter_all()メソッドが全ページを透過的に取得することのテスト"""
+        message_box_id = 123
+        per_page = 3
+
+        def make_ticket(ticket_id):
+            return {
+                "ticket_id": ticket_id,
+                "assignee": "yamada",
+                "status_cd": "open",
+                "created_at": "2021-01-05T13:31:56Z",
+                "last_updated_at": "2021-01-05T13:31:56Z",
+                "title": f"お問い合わせ{ticket_id}",
+                "color_cd": "red"
+            }
+
+        # 1ページ目: per_page と同数（フルページ） / 2ページ目: per_page 未満（最終ページ）
+        page1 = [make_ticket(i) for i in range(1, per_page + 1)]
+        page2 = [make_ticket(per_page + 1)]
+        client_mock.post.side_effect = [page1, page2]
+
+        # 実行
+        result = list(ticket_resource.iter_all(
+            message_box_id=message_box_id,
+            status_cds=["open"],
+            per_page=per_page
+        ))
+
+        # 検証: 全ページの全件が連結して得られる
+        assert len(result) == per_page + 1
+        assert all(isinstance(t, Ticket) for t in result)
+        assert [t.ticket_id for t in result] == [1, 2, 3, 4]
+
+        # 2ページ呼び出した時点で停止していること
+        assert client_mock.post.call_count == 2
+        first_data = client_mock.post.call_args_list[0].kwargs["data"]
+        second_data = client_mock.post.call_args_list[1].kwargs["data"]
+        assert first_data["page"] == 1
+        assert first_data["per_page"] == per_page
+        assert second_data["page"] == 2
+
+    def test_iter_all_stops_on_empty_page(self, ticket_resource, client_mock):
+        """ちょうど満杯のページの後、空ページで停止することのテスト"""
+        message_box_id = 123
+        per_page = 2
+
+        def make_ticket(ticket_id):
+            return {
+                "ticket_id": ticket_id,
+                "assignee": "yamada",
+                "status_cd": "open",
+                "created_at": "2021-01-05T13:31:56Z",
+                "last_updated_at": "2021-01-05T13:31:56Z",
+                "title": f"お問い合わせ{ticket_id}",
+                "color_cd": "red"
+            }
+
+        # フルページ -> フルページ -> 空ページ
+        client_mock.post.side_effect = [
+            [make_ticket(1), make_ticket(2)],
+            [make_ticket(3), make_ticket(4)],
+            []
+        ]
+
+        result = list(ticket_resource.iter_all(
+            message_box_id=message_box_id,
+            per_page=per_page
+        ))
+
+        assert [t.ticket_id for t in result] == [1, 2, 3, 4]
+        assert client_mock.post.call_count == 3
+
     def test_get(self, ticket_resource, client_mock):
         """get()メソッドのテスト"""
         # 準備

@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのチケット関連操作を処理するリソースクラスを提供します。
 """
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Iterator
 
 from ..models import Ticket, Message
 from ..constants import (
@@ -112,7 +112,83 @@ class TicketResource:
         
         # レスポンスをTicketオブジェクトのリストに変換
         return [Ticket.from_dict(ticket_data) for ticket_data in response]
-    
+
+    def iter_all(
+        self,
+        message_box_id: int,
+        ticket_ids: Optional[List[int]] = None,
+        label_ids: Optional[List[int]] = None,
+        status_cds: Optional[List[str]] = None,
+        color_cds: Optional[List[str]] = None,
+        assignee: Optional[str] = None,
+        message_ids: Optional[List[int]] = None,
+        has_attachments: Optional[bool] = None,
+        method_cds: Optional[List[str]] = None,
+        action_cds: Optional[List[str]] = None,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
+        date: Optional[str] = None,
+        within: Optional[str] = None,
+        pending_reason_ids: Optional[List[int]] = None,
+        per_page: int = 50
+    ) -> Iterator[Ticket]:
+        """全ページのチケットを透過的に取得します。
+
+        ページングを意識せずに、検索条件に一致するすべてのチケットを
+        順番に列挙するジェネレータです。内部で ``search`` を
+        ``page=1`` から呼び出し、各ページの ``Ticket`` を逐次 yield します。
+        取得件数が ``per_page`` 未満（または0件）になったページを
+        最終ページとみなして停止します。
+
+        Args:
+            message_box_id: 受信箱ID
+            ticket_ids: チケットIDリスト
+            label_ids: ラベルIDリスト
+            status_cds: ステータスコードリスト
+            color_cds: 色コードリスト
+            assignee: 担当者のメンション名
+            message_ids: メッセージIDリスト
+            has_attachments: 添付ファイルの有無
+            method_cds: チャネルコードリスト
+            action_cds: アクションコードリスト
+            since: メッセージの送信日時の開始（ISO 8601形式）
+            until: メッセージの送信日時の終了（ISO 8601形式）
+            date: メッセージの送信日時の終了（ISO 8601形式）
+            within: メッセージの送信日時の期間（1days〜99days または 1months〜99months）
+            pending_reason_ids: 保留理由IDリスト
+            per_page: 1ページあたりの表示件数（最大50）
+
+        Yields:
+            チケット
+        """
+        # 無限ループに対する安全弁（通常運用では到達しない十分大きな上限）
+        max_pages = 1000
+        for page in range(1, max_pages + 1):
+            tickets = self.search(
+                message_box_id=message_box_id,
+                ticket_ids=ticket_ids,
+                label_ids=label_ids,
+                status_cds=status_cds,
+                color_cds=color_cds,
+                assignee=assignee,
+                message_ids=message_ids,
+                has_attachments=has_attachments,
+                method_cds=method_cds,
+                action_cds=action_cds,
+                since=since,
+                until=until,
+                date=date,
+                within=within,
+                pending_reason_ids=pending_reason_ids,
+                per_page=per_page,
+                page=page
+            )
+            for ticket in tickets:
+                yield ticket
+            # 0件、または per_page 未満なら最終ページ
+            if len(tickets) < per_page:
+                break
+
     def get(self, message_box_id: int, ticket_id: int) -> Ticket:
         """チケットを取得します。
         

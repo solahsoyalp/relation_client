@@ -3,7 +3,7 @@
 
 このモジュールは、Re:lation APIのラベルリソースへのアクセスを提供します。
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Iterator
 
 from ..models import Label
 
@@ -44,7 +44,34 @@ class LabelResource:
         if isinstance(response, list):
             return [Label.from_dict(label_data) for label_data in response]
         return []
-    
+
+    def iter_all(self, message_box_id: int, per_page: Optional[int] = None) -> Iterator[Label]:
+        """全ページのラベルを透過的に取得
+
+        ページングを意識せずに、すべてのラベルを順番に列挙する
+        ジェネレータです。内部で ``list`` を ``page=1`` から呼び出し、
+        各ページの ``Label`` を逐次 yield します。取得件数が
+        ``per_page`` 未満（または0件）になったページを最終ページとみなして
+        停止します。
+
+        Args:
+            message_box_id: 受信箱ID
+            per_page: 1ページに表示する件数（デフォルト50, 最大100）
+
+        Yields:
+            Label: ラベルオブジェクト
+        """
+        # per_page 未指定時はAPIデフォルト件数を停止判定に用いる
+        page_size = per_page if per_page is not None else 50
+        # 無限ループに対する安全弁（通常運用では到達しない十分大きな上限）
+        max_pages = 1000
+        for page in range(1, max_pages + 1):
+            labels = self.list(message_box_id=message_box_id, per_page=per_page, page=page)
+            for label in labels:
+                yield label
+            if len(labels) < page_size:
+                break
+
     def create(self, message_box_id: int, name: str, color: str, parent_id: Optional[int] = None) -> Dict[str, int]:
         """ラベルを登録
 

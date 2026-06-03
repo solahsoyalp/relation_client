@@ -8,6 +8,16 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 
 
+def _parse_dt(value):
+    """ISO 8601 文字列を datetime に変換する。失敗時は None を返す。"""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (ValueError, TypeError):
+        return None
+
+
 @dataclass
 class RelationObject:
     """Re:lation APIオブジェクトの基本クラス"""
@@ -20,6 +30,10 @@ class RelationObject:
         instance._raw_data = data
         return instance
 
+    def to_dict(self) -> Dict[str, Any]:
+        """元のAPIレスポンス辞書（_raw_data）のコピーを返す。"""
+        return dict(self._raw_data)
+
 
 @dataclass
 class Email:
@@ -30,6 +44,10 @@ class Email:
     def from_dict(cls, data: Dict[str, str]) -> 'Email':
         return cls(email=data.get('email', ''))
 
+    def to_dict(self) -> Dict[str, str]:
+        """メールアドレス情報を辞書に変換する。"""
+        return {'email': self.email}
+
 
 @dataclass
 class Tel:
@@ -39,6 +57,10 @@ class Tel:
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> 'Tel':
         return cls(tel=data.get('tel', ''))
+
+    def to_dict(self) -> Dict[str, str]:
+        """電話番号情報を辞書に変換する。"""
+        return {'tel': self.tel}
 
 
 @dataclass
@@ -99,14 +121,10 @@ class Customer(RelationObject):
         
         # バッジID
         instance.badge_ids = data.get('badge_ids', [])
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         return instance
 
 
@@ -126,15 +144,11 @@ class CustomerGroup(RelationObject):
         instance.customer_group_id = data.get('customer_group_id')
         instance.name = data.get('name')
         instance.message_box_ids = data.get('message_box_ids', [])
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
+        return instance
 
 
 @dataclass
@@ -153,14 +167,10 @@ class Comment(RelationObject):
         instance.commenter = data.get('commenter')
         instance.comment_type = data.get('comment_type')
         instance.comment = data.get('comment')
-        
+
         # コメント日時
-        if 'commented_at' in data and data['commented_at']:
-            try:
-                instance.commented_at = datetime.fromisoformat(data['commented_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.commented_at = _parse_dt(data.get('commented_at'))
+
         return instance
 
 
@@ -243,28 +253,16 @@ class Message(RelationObject):
         instance.action_cd = data.get('action_cd')
         instance.is_html = data.get('is_html', False)
         instance.reply_to = data.get('reply_to')
-        
+
         # 送信日時
-        if 'sent_at' in data and data['sent_at']:
-            try:
-                instance.sent_at = datetime.fromisoformat(data['sent_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.sent_at = _parse_dt(data.get('sent_at'))
+
         # 作成日時
-        if 'created_at' in data and data['created_at']:
-            try:
-                instance.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.created_at = _parse_dt(data.get('created_at'))
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         # コメント
         instance.comments = [Comment.from_dict(comment) for comment in data.get('comments', [])]
         
@@ -307,21 +305,13 @@ class Ticket(RelationObject):
         instance.case_category_ids = data.get('case_category_ids', [])
         instance.label_ids = data.get('label_ids', [])
         instance.pending_reason_id = data.get('pending_reason_id')
-        
+
         # 作成日時
-        if 'created_at' in data and data['created_at']:
-            try:
-                instance.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.created_at = _parse_dt(data.get('created_at'))
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         # メッセージ
         if 'messages' in data:
             instance.messages = [Message.from_dict(message) for message in data.get('messages', [])]
@@ -353,14 +343,10 @@ class ChatConversation(RelationObject):
         instance.note = data.get('note')
         instance.file_name = data.get('file_name')
         instance.auto_send = data.get('auto_send')
-        
+
         # 送信日時
-        if 'sent_at' in data and data['sent_at']:
-            try:
-                instance.sent_at = datetime.fromisoformat(data['sent_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.sent_at = _parse_dt(data.get('sent_at'))
+
         return instance
 
 
@@ -567,15 +553,11 @@ class MessageBox(RelationObject):
         instance.name = data.get('name')
         instance.color = data.get('color')
         instance.customer_group_id = data.get('customer_group_id')
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
+        return instance
 
 
 @dataclass
@@ -627,15 +609,11 @@ class User(RelationObject):
         instance.email = data.get('email')
         instance.is_tenant_admin = data.get('is_tenant_admin', False)
         instance.is_otp_required = data.get('is_otp_required', False)
-        
+
         # 最終アクセス日時
-        if 'last_page_loaded_at' in data and data['last_page_loaded_at']:
-            try:
-                instance.last_page_loaded_at = datetime.fromisoformat(data['last_page_loaded_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_page_loaded_at = _parse_dt(data.get('last_page_loaded_at'))
+
+        return instance
 
 
 @dataclass
