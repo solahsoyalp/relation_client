@@ -639,13 +639,25 @@ print(f"URL有効期限: {download_info['expires_in_sec']}秒")
 import requests
 import os
 
-response = requests.get(download_info['url'], stream=True)
-if response.status_code == 200:
-    # ファイルを保存
-    with open(download_info['file_name'], 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
-    print(f"ファイルを保存しました: {os.path.abspath(download_info['file_name'])}")
+# 保存先ディレクトリを明示的に指定する
+save_dir = "./downloads"
+os.makedirs(save_dir, exist_ok=True)
+
+# API由来の file_name はそのまま使わない。
+# os.path.basename でファイル名部分だけを取り出し、パストラバーサル（'../' や
+# 絶対パス）で保存先ディレクトリの外へ書き込まれるのを防ぐ。
+safe_name = os.path.basename(download_info['file_name'])
+if not safe_name:
+    raise ValueError("不正なファイル名です")
+save_path = os.path.join(save_dir, safe_name)
+
+# timeout を指定し、HTTPエラーは例外として扱う
+response = requests.get(download_info['url'], stream=True, timeout=30)
+response.raise_for_status()
+with open(save_path, 'wb') as f:
+    for chunk in response.iter_content(chunk_size=8192):
+        f.write(chunk)
+print(f"ファイルを保存しました: {os.path.abspath(save_path)}")
 ```
 
 ## エラーハンドリング
