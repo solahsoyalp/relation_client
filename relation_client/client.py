@@ -4,6 +4,7 @@ Re:lation APIクライアント
 このモジュールは、Re:lation APIとの通信を処理するメインクライアントクラスを提供します。
 """
 
+import re
 import time
 from typing import Dict, Any, Optional
 
@@ -36,12 +37,39 @@ from .resources.templates import TemplateResource
 from .resources.attachments import AttachmentResource
 
 
+# サブドメインとして許可する単一DNSラベル（英小数字とハイフン、先頭末尾は英数字、最大63文字）。
+# 認証トークン(Authorization: Bearer)が意図しないホストへ送信されるのを防ぐため、
+# URLホストを変形し得る文字（'/', '?', '@', '.', 大文字など）を含む値は拒否する。
+_SUBDOMAIN_PATTERN = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
+
+
 class RelationClient:
     """Re:lation APIクライアント
 
     このクラスは、Re:lation APIと通信するための基本クライアントを提供します。
     各エンドポイントへのアクセスは、リソースクラス経由で行います。
     """
+
+    @staticmethod
+    def _validate_subdomain(subdomain: str) -> str:
+        """サブドメインが単一DNSラベルとして妥当か検証する。
+
+        Args:
+            subdomain: 検証対象のサブドメイン
+
+        Returns:
+            検証済みのサブドメイン
+
+        Raises:
+            ValueError: サブドメインが不正な場合（URLホストを変形し得る値を含む等）
+        """
+        if not isinstance(subdomain, str) or not _SUBDOMAIN_PATTERN.match(subdomain):
+            raise ValueError(
+                "subdomain は単一のDNSラベル（英小文字・数字・ハイフン、"
+                "先頭末尾は英数字、最大63文字）である必要があります: "
+                f"{subdomain!r}"
+            )
+        return subdomain
 
     def __init__(
         self,
@@ -63,7 +91,8 @@ class RelationClient:
             retry_delay: リトライ間の待機秒数
         """
         self.access_token = access_token
-        self.subdomain = subdomain
+        # 認証トークンの外部送信を防ぐため、サブドメインを検証する
+        self.subdomain = self._validate_subdomain(subdomain)
         self.api_version = api_version
         self.timeout = timeout
         self.max_retries = max_retries

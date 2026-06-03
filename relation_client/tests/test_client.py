@@ -32,6 +32,31 @@ class TestRelationClient(unittest.TestCase):
         self.assertEqual(self.client.api_version, 'v2')
         self.assertEqual(self.client._base_url, 'https://test.relationapp.jp/api/v2')
 
+    def test_valid_subdomains_accepted(self):
+        """正常なサブドメインは従来通り利用できることを確認"""
+        for sub in ('test', 'my-company', 'abc123', 'a', '0', 'a' * 63):
+            client = RelationClient(access_token='t', subdomain=sub)
+            self.assertEqual(client.subdomain, sub)
+            self.assertEqual(client._base_url, f'https://{sub}.relationapp.jp/api/v2')
+
+    def test_invalid_subdomain_rejected(self):
+        """ホスト名を変形し得るサブドメインが拒否されることを確認"""
+        invalid_values = [
+            'attacker.example/path',  # '/' でパス／ホストを変形
+            'evil.example',           # '.' で別ホストを指定
+            'a?b',                    # クエリ注入
+            'user@host',              # 認証情報部の注入
+            'sub domain',             # 空白
+            '-leading',               # 先頭ハイフン
+            'trailing-',              # 末尾ハイフン
+            'UPPER',                  # 大文字（小文字のみ許可）
+            '',                       # 空文字
+            'a' * 64,                 # 64文字（上限超過）
+        ]
+        for value in invalid_values:
+            with self.assertRaises(ValueError):
+                RelationClient(access_token='t', subdomain=value)
+
     @patch('requests.Session.request')
     def test_get_success(self, mock_request):
         """GETリクエストが成功することを確認"""
