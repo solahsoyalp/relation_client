@@ -9,6 +9,12 @@
 ### 追加
 - 次回リリースの変更をここに記載します
 
+## [0.3.1] - 2026-06-04
+
+### その他
+- メンテナンスリリース。機能・APIの変更はありません。
+- リリース自動化（PyPI Trusted Publisher / GitHub Actions OIDC）導入後の初回自動公開の動作確認。
+
 ## [0.3.0] - 2026-06-04
 
 ### 変更（破壊的）
@@ -94,6 +100,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Changes for the next release will be documented here
+
+## [0.3.1] - 2026-06-04
+
+### Misc
+- Maintenance release. No functional or API changes.
+- Validates the automated release pipeline (PyPI Trusted Publisher / GitHub Actions OIDC).
 
 ## [0.3.0] - 2026-06-04
 
