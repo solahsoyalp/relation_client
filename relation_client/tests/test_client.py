@@ -9,7 +9,9 @@ import requests
 
 from relation_client import RelationClient
 from relation_client.exceptions import (
-    AuthenticationError, APIError, RelationPermissionError, PermissionError
+    AuthenticationError, APIError, RelationPermissionError, PermissionError,
+    ResourceNotFoundError, RateLimitError, InvalidRequestError,
+    ServiceUnavailableError
 )
 
 
@@ -233,6 +235,230 @@ class TestRelationClient(unittest.TestCase):
         self.client.close()
 
         self.client._session.close.assert_called_once()
+
+    @patch('requests.Session.request')
+    def test_resource_not_found_error(self, mock_request):
+        """HTTP 404 で ResourceNotFoundError が送出されることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.json.return_value = {'error': 'Not Found'}
+        mock_request.return_value = mock_response
+
+        # 404 は ResourceNotFoundError になる
+        with self.assertRaises(ResourceNotFoundError):
+            self.client.get('test_path')
+
+    @patch('requests.Session.request')
+    def test_invalid_request_error_400(self, mock_request):
+        """HTTP 400 で InvalidRequestError が送出されることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {'error': 'Bad Request'}
+        mock_request.return_value = mock_response
+
+        # 400 は InvalidRequestError になる
+        with self.assertRaises(InvalidRequestError):
+            self.client.get('test_path')
+
+    @patch('requests.Session.request')
+    def test_invalid_request_error_415(self, mock_request):
+        """HTTP 415 で InvalidRequestError が送出されることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 415
+        mock_response.json.return_value = {'error': 'Unsupported Media Type'}
+        mock_request.return_value = mock_response
+
+        # 415 は InvalidRequestError になる
+        with self.assertRaises(InvalidRequestError):
+            self.client.get('test_path')
+
+    @patch('requests.Session.request')
+    def test_server_error_500(self, mock_request):
+        """HTTP 500 で APIError が送出されることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.json.return_value = {'error': 'Internal Server Error'}
+        mock_request.return_value = mock_response
+
+        # 500 は APIError になる
+        with self.assertRaises(APIError):
+            self.client.get('test_path')
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_rate_limit_retried_then_success(self, mock_request, mock_sleep):
+        """HTTP 429 後にリトライして成功することを確認"""
+        # 1回目は429、2回目は成功を返す
+        rate_limited = MagicMock()
+        rate_limited.status_code = 429
+        rate_limited.headers = {'Retry-After': '2'}
+        rate_limited.json.return_value = {'error': 'Too Many Requests'}
+
+        success = MagicMock()
+        success.status_code = 200
+        success.json.return_value = {'data': 'ok'}
+        mock_request.side_effect = [rate_limited, success]
+
+        result = self.client.get('test_path')
+
+        # Retry-After に従ってスリープし、最終的に成功結果を返す
+        mock_sleep.assert_called_once_with(2)
+        self.assertEqual(mock_request.call_count, 2)
+        self.assertEqual(result, {'data': 'ok'})
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_rate_limit_exhausted_raises(self, mock_request, mock_sleep):
+        """HTTP 429 がリトライ上限を超えると RateLimitError になることを確認"""
+        # 常に429を返す
+        mock_response = MagicMock()
+        mock_response.status_code = 429
+        mock_response.headers = {'Retry-After': '1'}
+        mock_response.json.return_value = {'error': 'Too Many Requests'}
+        mock_request.return_value = mock_response
+
+        # リトライ上限を超えると RateLimitError になる
+        with self.assertRaises(RateLimitError):
+            self.client.get('test_path')
+
+        # 初回 + max_retries 回のリトライで合計 max_retries + 1 回呼ばれる
+        self.assertEqual(mock_request.call_count, self.client.max_retries + 1)
+        self.assertEqual(mock_sleep.call_count, self.client.max_retries)
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_service_unavailable_retried_then_success(self, mock_request, mock_sleep):
+        """HTTP 503 後にリトライして成功することを確認"""
+        # 1回目は503、2回目は成功を返す
+        unavailable = MagicMock()
+        unavailable.status_code = 503
+        unavailable.json.return_value = {'error': 'Service Unavailable'}
+
+        success = MagicMock()
+        success.status_code = 200
+        success.json.return_value = {'data': 'ok'}
+        mock_request.side_effect = [unavailable, success]
+
+        result = self.client.get('test_path')
+
+        # retry_delay に従ってスリープし、最終的に成功結果を返す
+        mock_sleep.assert_called_once_with(self.client.retry_delay)
+        self.assertEqual(mock_request.call_count, 2)
+        self.assertEqual(result, {'data': 'ok'})
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_service_unavailable_exhausted_raises(self, mock_request, mock_sleep):
+        """HTTP 503 がリトライ上限を超えると ServiceUnavailableError になることを確認"""
+        # 常に503を返す
+        mock_response = MagicMock()
+        mock_response.status_code = 503
+        mock_response.json.return_value = {'error': 'Service Unavailable'}
+        mock_request.return_value = mock_response
+
+        # リトライ上限を超えると ServiceUnavailableError になる
+        with self.assertRaises(ServiceUnavailableError):
+            self.client.get('test_path')
+
+        # 初回 + max_retries 回のリトライで合計 max_retries + 1 回呼ばれる
+        self.assertEqual(mock_request.call_count, self.client.max_retries + 1)
+        self.assertEqual(mock_sleep.call_count, self.client.max_retries)
+
+    @patch('requests.Session.request')
+    def test_unexpected_status_code_raises_api_error(self, mock_request):
+        """想定外のステータスコードで APIError が送出されることを確認"""
+        # モックの設定（マッピングのない 418 を返す）
+        mock_response = MagicMock()
+        mock_response.status_code = 418
+        mock_response.json.return_value = {'error': "I'm a teapot"}
+        mock_request.return_value = mock_response
+
+        # 予期しないステータスコードのメッセージを持つ APIError になる
+        with self.assertRaises(APIError) as ctx:
+            self.client.get('test_path')
+
+        self.assertIn('予期しないステータスコード', ctx.exception.message)
+        self.assertIn('418', ctx.exception.message)
+
+    @patch('requests.Session.request')
+    def test_error_message_from_json_error_key(self, mock_request):
+        """JSONボディの error キーが message に反映されることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {'error': 'エラーメッセージ'}
+        mock_request.return_value = mock_response
+
+        # error キーの値が例外の message になる
+        with self.assertRaises(InvalidRequestError) as ctx:
+            self.client.get('test_path')
+
+        self.assertEqual(ctx.exception.message, 'エラーメッセージ')
+
+    @patch('requests.Session.request')
+    def test_error_message_from_json_message_key(self, mock_request):
+        """JSONボディの message キーが message に反映されることを確認"""
+        # モックの設定（error キーは無く message キーを持つ）
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {'message': 'メッセージキー'}
+        mock_request.return_value = mock_response
+
+        # message キーの値が例外の message になる
+        with self.assertRaises(InvalidRequestError) as ctx:
+            self.client.get('test_path')
+
+        self.assertEqual(ctx.exception.message, 'メッセージキー')
+
+    @patch('requests.Session.request')
+    def test_error_message_from_non_json_text(self, mock_request):
+        """非JSONのテキストボディが message に反映されることを確認"""
+        # モックの設定（json() は ValueError、text を持つ）
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.side_effect = ValueError('No JSON')
+        mock_response.text = 'プレーンテキストエラー'
+        mock_request.return_value = mock_response
+
+        # 非JSONの場合は text の値が例外の message になる
+        with self.assertRaises(InvalidRequestError) as ctx:
+            self.client.get('test_path')
+
+        self.assertEqual(ctx.exception.message, 'プレーンテキストエラー')
+
+    @patch('requests.Session.request')
+    def test_success_empty_body_returns_empty_dict(self, mock_request):
+        """成功レスポンスのボディが空の場合に空辞書が返ることを確認"""
+        # モックの設定（content が空）
+        mock_response = MagicMock()
+        mock_response.status_code = 204
+        mock_response.content = b''
+        mock_request.return_value = mock_response
+
+        result = self.client.delete('test_path')
+
+        # 空ボディは空辞書を返す
+        self.assertEqual(result, {})
+
+    @patch('requests.Session.request')
+    def test_success_non_json_body_returns_data_wrapper(self, mock_request):
+        """成功レスポンスが非JSONの場合に data でラップされることを確認"""
+        # モックの設定（content はあるが json() は ValueError）
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b'plain text'
+        mock_response.json.side_effect = ValueError('No JSON')
+        mock_response.text = 'plain text'
+        mock_request.return_value = mock_response
+
+        result = self.client.get('test_path')
+
+        # 非JSONの成功ボディは {"data": <text>} で返る
+        self.assertEqual(result, {'data': 'plain text'})
 
 
 if __name__ == '__main__':

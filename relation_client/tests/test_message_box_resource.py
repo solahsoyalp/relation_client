@@ -81,3 +81,38 @@ class TestMessageBoxResource:
         assert result.name == "受信箱1"
         assert result.color == "green"
         assert result.customer_group_id == 1
+
+    def test_list_empty(self, message_box_resource, client_mock):
+        """list()メソッドが空レスポンスで空リストを返すテスト"""
+        # モックの設定
+        client_mock.get.return_value = []
+
+        # 実行
+        result = message_box_resource.list()
+
+        # 検証
+        client_mock.get.assert_called_once_with("message_boxes")
+        assert result == []
+
+    def test_get_other_id(self, message_box_resource, client_mock):
+        """get()メソッドが任意の message_box_id をパスに含めるテスト"""
+        # 準備
+        message_box_id = 42
+        client_mock.get.return_value = {
+            "name": "受信箱42",
+            "color": "blue",
+            "message_box_id": 42,
+            "last_updated_at": "2021-02-01T00:00:00Z",
+            "customer_group_id": 7
+        }
+
+        # 実行
+        result = message_box_resource.get(message_box_id)
+
+        # 検証
+        client_mock.get.assert_called_once_with("message_boxes/42")
+        assert isinstance(result, MessageBox)
+        assert result.message_box_id == 42
+        assert result.name == "受信箱42"
+        assert result.color == "blue"
+        assert result.customer_group_id == 7

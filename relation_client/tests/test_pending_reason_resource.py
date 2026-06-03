@@ -69,3 +69,37 @@ class TestPendingReasonResource:
         assert result[2].name == "翌日連絡"
         assert result[2].is_snoozed is True
         assert result[2].snooze_term == "tomorrow"
+
+    def test_list_empty(self, pending_reason_resource, client_mock):
+        """list()メソッドが空レスポンスで空リストを返すテスト"""
+        # モックの設定
+        client_mock.get.return_value = []
+
+        # 実行
+        result = pending_reason_resource.list(456)
+
+        # 検証
+        client_mock.get.assert_called_once_with("456/pending_reasons")
+        assert result == []
+
+    def test_list_path_uses_message_box_id(self, pending_reason_resource, client_mock):
+        """list()メソッドが message_box_id を正しくパスに含めるテスト"""
+        # モックの設定（単一要素）
+        client_mock.get.return_value = [
+            {
+                "name": "確認待ち",
+                "snooze_term": "no_term",
+                "pending_reason_id": 99,
+                "is_snoozed": False
+            }
+        ]
+
+        # 実行
+        result = pending_reason_resource.list(789)
+
+        # 検証
+        client_mock.get.assert_called_once_with("789/pending_reasons")
+        assert len(result) == 1
+        assert isinstance(result[0], PendingReason)
+        assert result[0].pending_reason_id == 99
+        assert result[0].is_snoozed is False

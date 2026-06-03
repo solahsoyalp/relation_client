@@ -145,3 +145,76 @@ class TestCaseCategoryResource:
 
         # 検証
         client_mock.put.assert_called_once_with('123/case_categories/1', data={'name': '名前のみ更新'})
+
+    def test_update_parent_only(self, case_category_resource, client_mock):
+        """update()メソッドで parent_id のみ指定するテスト"""
+        # 実行
+        case_category_resource.update(
+            message_box_id=123,
+            case_category_id=5,
+            parent_id=2
+        )
+
+        # 検証
+        client_mock.put.assert_called_once_with('123/case_categories/5', data={'parent_id': 2})
+
+    def test_update_archived_only(self, case_category_resource, client_mock):
+        """update()メソッドで archived のみ指定するテスト"""
+        # 実行
+        case_category_resource.update(
+            message_box_id=123,
+            case_category_id=7,
+            archived=True
+        )
+
+        # 検証
+        client_mock.put.assert_called_once_with('123/case_categories/7', data={'archived': True})
+
+    def test_update_empty(self, case_category_resource, client_mock):
+        """update()メソッドで何も指定しない場合のテスト"""
+        # 実行
+        case_category_resource.update(message_box_id=123, case_category_id=9)
+
+        # 検証
+        client_mock.put.assert_called_once_with('123/case_categories/9', data={})
+
+    def test_iter_all_single_page(self, case_category_resource, client_mock):
+        """iter_all()メソッドの単一ページ（短い最終ページ）のテスト"""
+        # per_page=100 に対し3件しか返らないため1ページで停止
+        result = list(case_category_resource.iter_all(message_box_id=123, per_page=100))
+
+        # 検証
+        client_mock.get.assert_called_once_with('123/case_categories', params={'per_page': 100, 'page': 1})
+        assert len(result) == 3
+        assert all(isinstance(item, CaseCategory) for item in result)
+        assert [c.case_category_id for c in result] == [1, 2, 3]
+
+    def test_iter_all_multi_page(self, case_category_resource, client_mock):
+        """iter_all()メソッドの複数ページのテスト（フルページ後に短い最終ページ）"""
+        full_page = [
+            {"case_category_id": i, "name": f"カテゴリ{i}", "parent_id": None, "archived": False}
+            for i in range(1, 3)
+        ]
+        last_page = [
+            {"case_category_id": 3, "name": "カテゴリ3", "parent_id": None, "archived": False}
+        ]
+        client_mock.get.side_effect = [full_page, last_page]
+
+        # per_page=2: 1ページ目はフル(2件)、2ページ目は1件で停止
+        result = list(case_category_resource.iter_all(message_box_id=123, per_page=2))
+
+        # 検証
+        assert len(result) == 3
+        assert [c.case_category_id for c in result] == [1, 2, 3]
+        assert client_mock.get.call_count == 2
+        client_mock.get.assert_any_call('123/case_categories', params={'per_page': 2, 'page': 1})
+        client_mock.get.assert_any_call('123/case_categories', params={'per_page': 2, 'page': 2})
+
+    def test_iter_all_default_per_page(self, case_category_resource, client_mock):
+        """iter_all()メソッドで per_page を省略した場合のテスト（デフォルト30で停止）"""
+        # 3件 < 30 のため1ページで停止
+        result = list(case_category_resource.iter_all(message_box_id=123))
+
+        # 検証
+        client_mock.get.assert_called_once_with('123/case_categories', params={'page': 1})
+        assert len(result) == 3

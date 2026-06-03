@@ -72,3 +72,54 @@ class TestBadgeResource:
         client_mock.get.assert_called_once_with('customer_groups/123/badges', params={})
         assert isinstance(result, list)
         assert len(result) == 3
+
+    def test_list_non_list_response(self, badge_resource, client_mock):
+        """list()メソッドがリスト以外のレスポンスで空リストを返すテスト"""
+        client_mock.get.return_value = {"error": "not found"}
+
+        result = badge_resource.list(customer_group_id=123)
+
+        assert result == []
+
+    def test_iter_all_multi_page(self, badge_resource, client_mock):
+        """iter_all()メソッドの複数ページのテスト"""
+        # フルページ(per_page=2)の後に短いページ(1件)を返すことで停止させる
+        full_page = [
+            {"badge_id": 1, "name": "VIP"},
+            {"badge_id": 2, "name": "要注意"},
+        ]
+        short_page = [
+            {"badge_id": 3, "name": "新規顧客"},
+        ]
+        client_mock.get.side_effect = [full_page, short_page]
+
+        result = list(badge_resource.iter_all(customer_group_id=123, per_page=2))
+
+        assert len(result) == 3
+        assert all(isinstance(badge, Badge) for badge in result)
+        assert [badge.badge_id for badge in result] == [1, 2, 3]
+        assert client_mock.get.call_count == 2
+        client_mock.get.assert_any_call('customer_groups/123/badges', params={'per_page': 2, 'page': 1})
+        client_mock.get.assert_any_call('customer_groups/123/badges', params={'per_page': 2, 'page': 2})
+
+    def test_iter_all_single_short_page(self, badge_resource, client_mock):
+        """iter_all()メソッドが1ページ目で停止するテスト(デフォルトper_page)"""
+        # デフォルトの停止判定件数(30)未満なので1ページで停止する
+        client_mock.get.return_value = [
+            {"badge_id": 1, "name": "VIP"},
+        ]
+
+        result = list(badge_resource.iter_all(customer_group_id=123))
+
+        assert len(result) == 1
+        assert client_mock.get.call_count == 1
+        client_mock.get.assert_called_once_with('customer_groups/123/badges', params={'page': 1})
+
+    def test_iter_all_empty(self, badge_resource, client_mock):
+        """iter_all()メソッドが0件のとき即停止するテスト"""
+        client_mock.get.return_value = []
+
+        result = list(badge_resource.iter_all(customer_group_id=123, per_page=10))
+
+        assert result == []
+        assert client_mock.get.call_count == 1
