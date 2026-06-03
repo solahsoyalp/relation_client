@@ -298,3 +298,223 @@ class TestTicketResource:
         assert client_mock.post.call_args.kwargs["data"]["ticket_id"] == ticket_id
         assert isinstance(result, dict)
         assert result["message_id"] == 790
+
+    def test_search_all_optional_params(self, ticket_resource, client_mock):
+        """search()に全ての任意パラメータを指定した場合、POSTボディに全て含まれることのテスト"""
+        message_box_id = 123
+        client_mock.post.return_value = []
+
+        result = ticket_resource.search(
+            message_box_id=message_box_id,
+            ticket_ids=[1, 2],
+            label_ids=[10, 11],
+            status_cds=["open", "ongoing"],
+            color_cds=["red", "blue"],
+            assignee="yamada",
+            message_ids=[100, 101],
+            has_attachments=True,
+            method_cds=["mail"],
+            action_cds=["received"],
+            since="2021-01-01T00:00:00Z",
+            until="2021-01-31T23:59:59Z",
+            date="2021-01-15T00:00:00Z",
+            within="7days",
+            pending_reason_ids=[5, 6],
+            per_page=20,
+            page=2
+        )
+
+        # 空レスポンス -> 空リスト（境界）
+        assert result == []
+
+        data = client_mock.post.call_args.kwargs["data"]
+        assert data["ticket_ids"] == [1, 2]
+        assert data["label_ids"] == [10, 11]
+        assert data["status_cds"] == ["open", "ongoing"]
+        assert data["color_cds"] == ["red", "blue"]
+        assert data["assignee"] == "yamada"
+        assert data["message_ids"] == [100, 101]
+        assert data["has_attachments"] is True
+        assert data["method_cds"] == ["mail"]
+        assert data["action_cds"] == ["received"]
+        assert data["since"] == "2021-01-01T00:00:00Z"
+        assert data["until"] == "2021-01-31T23:59:59Z"
+        assert data["date"] == "2021-01-15T00:00:00Z"
+        assert data["within"] == "7days"
+        assert data["pending_reason_ids"] == [5, 6]
+        assert data["per_page"] == 20
+        assert data["page"] == 2
+
+    def test_search_minimal_body_no_optional_leak(self, ticket_resource, client_mock):
+        """search()に必須引数のみ指定した場合、任意キーがボディに漏れないことのテスト"""
+        message_box_id = 123
+        client_mock.post.return_value = []
+
+        result = ticket_resource.search(message_box_id=message_box_id)
+
+        assert result == []
+        data = client_mock.post.call_args.kwargs["data"]
+        # per_page と page はデフォルト値が常に設定される
+        assert data == {"per_page": 50, "page": 1}
+        # 任意キーは一切含まれない
+        optional_keys = {
+            "ticket_ids", "label_ids", "status_cds", "color_cds", "assignee",
+            "message_ids", "has_attachments", "method_cds", "action_cds",
+            "since", "until", "date", "within", "pending_reason_ids",
+        }
+        assert optional_keys.isdisjoint(data.keys())
+
+    @pytest.mark.parametrize("has_attachments", [True, False])
+    def test_search_has_attachments_boolean(self, ticket_resource, client_mock, has_attachments):
+        """has_attachments は False でもボディに含まれることのテスト（is not None 分岐）"""
+        client_mock.post.return_value = []
+
+        ticket_resource.search(message_box_id=123, has_attachments=has_attachments)
+
+        data = client_mock.post.call_args.kwargs["data"]
+        assert data["has_attachments"] is has_attachments
+
+    def test_search_assignee_empty_string(self, ticket_resource, client_mock):
+        """assignee は空文字でもボディに含まれることのテスト（is not None 分岐）"""
+        client_mock.post.return_value = []
+
+        ticket_resource.search(message_box_id=123, assignee="")
+
+        data = client_mock.post.call_args.kwargs["data"]
+        assert data["assignee"] == ""
+
+    def test_update_all_optional_params(self, ticket_resource, client_mock):
+        """update()に全ての任意パラメータを指定した場合、PUTボディに全て含まれることのテスト"""
+        message_box_id = 123
+        ticket_id = 456
+
+        ticket_resource.update(
+            message_box_id=message_box_id,
+            ticket_id=ticket_id,
+            status_cd="closed",
+            pending_reason_id=7,
+            snooze_term="tomorrow",
+            snooze_time="2021-02-01T09:00:00Z",
+            snooze_comment="後で対応",
+            notification_mention_name="suzuki",
+            label_ids=[1, 2],
+            assignee="yamada",
+            approval_required=True,
+            assign_comment="担当割り当て",
+            color_cd="red",
+            case_category_ids=[3, 4]
+        )
+
+        expected = {
+            "status_cd": "closed",
+            "pending_reason_id": 7,
+            "snooze_term": "tomorrow",
+            "snooze_time": "2021-02-01T09:00:00Z",
+            "snooze_comment": "後で対応",
+            "notification_mention_name": "suzuki",
+            "label_ids": [1, 2],
+            "assignee": "yamada",
+            "approval_required": True,
+            "assign_comment": "担当割り当て",
+            "color_cd": "red",
+            "case_category_ids": [3, 4],
+        }
+        client_mock.put.assert_called_once_with(
+            f"{message_box_id}/tickets/{ticket_id}", data=expected
+        )
+
+    def test_update_minimal_body_no_optional_leak(self, ticket_resource, client_mock):
+        """update()に必須引数のみ指定した場合、ボディが空でPUTされることのテスト"""
+        message_box_id = 123
+        ticket_id = 456
+
+        ticket_resource.update(message_box_id=message_box_id, ticket_id=ticket_id)
+
+        client_mock.put.assert_called_once_with(
+            f"{message_box_id}/tickets/{ticket_id}", data={}
+        )
+
+    def test_update_falsy_values_included(self, ticket_resource, client_mock):
+        """update()でFalse/空リスト等のfalsyな値もボディに含まれることのテスト（is not None 分岐）"""
+        message_box_id = 123
+        ticket_id = 456
+
+        ticket_resource.update(
+            message_box_id=message_box_id,
+            ticket_id=ticket_id,
+            label_ids=[],
+            assignee="",
+            approval_required=False,
+            case_category_ids=[]
+        )
+
+        data = client_mock.put.call_args.kwargs["data"]
+        assert data["label_ids"] == []
+        assert data["assignee"] == ""
+        assert data["approval_required"] is False
+        assert data["case_category_ids"] == []
+
+    def test_create_record_all_optional_params(self, ticket_resource, client_mock):
+        """create_record()に全ての任意パラメータを指定した場合、POSTボディに全て含まれることのテスト"""
+        message_box_id = 123
+        client_mock.post.return_value = {"message_id": 789, "ticket_id": 456}
+
+        result = ticket_resource.create_record(
+            message_box_id=message_box_id,
+            subject="応対メモ",
+            operated_at="2021-01-05T13:30:00+09:00",
+            duration=30,
+            body="対応しました",
+            ticket_id=456,
+            status_cd="open",
+            operator="tanaka",
+            customer_email="customer@example.com",
+            customer_tel="03-1234-5678",
+            icon_cd="meeting",
+            is_html=True,
+            assignee="yamada"
+        )
+
+        assert result == {"message_id": 789, "ticket_id": 456}
+
+        data = client_mock.post.call_args.kwargs["data"]
+        # 必須フィールド
+        assert data["subject"] == "応対メモ"
+        assert data["operated_at"] == "2021-01-05T13:30:00+09:00"
+        assert data["duration"] == 30
+        assert data["body"] == "対応しました"
+        # 任意フィールド
+        assert data["ticket_id"] == 456
+        assert data["status_cd"] == "open"
+        assert data["operator"] == "tanaka"
+        assert data["customer_email"] == "customer@example.com"
+        assert data["customer_tel"] == "03-1234-5678"
+        assert data["icon_cd"] == "meeting"
+        assert data["is_html"] is True
+        assert data["assignee"] == "yamada"
+
+    def test_create_record_minimal_body_defaults(self, ticket_resource, client_mock):
+        """create_record()に必須引数のみ指定した場合、デフォルト値が設定されることのテスト"""
+        from relation_client.constants import STATUS_CLOSED, ICON_RECEIVED_PHONE
+
+        message_box_id = 123
+        client_mock.post.return_value = {"message_id": 789, "ticket_id": 456}
+
+        ticket_resource.create_record(
+            message_box_id=message_box_id,
+            subject="応対メモ",
+            operated_at="2021-01-05T13:30:00+09:00",
+            duration=0,
+            body="対応しました"
+        )
+
+        data = client_mock.post.call_args.kwargs["data"]
+        # 必須 + デフォルト値を持つフィールド
+        assert data["subject"] == "応対メモ"
+        assert data["duration"] == 0
+        assert data["status_cd"] == STATUS_CLOSED
+        assert data["icon_cd"] == ICON_RECEIVED_PHONE
+        assert data["is_html"] is False
+        # 純粋な任意フィールドは含まれない
+        for key in ("ticket_id", "operator", "customer_email", "customer_tel", "assignee"):
+            assert key not in data

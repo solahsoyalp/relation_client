@@ -161,6 +161,142 @@ class TestMailResource:
             "ticket_id": 222
         }
 
+    def test_send_all_options(self, mail_resource, client_mock):
+        """send()メソッドの全オプション指定テスト (reply_to/attachments含む)"""
+        attachments = [{"file_name": "a.txt", "data": "xxx"}]
+        # 実行
+        result = mail_resource.send(
+            message_box_id=123,
+            mail_account_id=1,
+            to="test@example.com",
+            subject="テストメール",
+            body="これはテストメールです。",
+            status_cd="open",
+            cc="cc@example.com",
+            bcc="bcc@example.com",
+            reply_to="reply@example.com",
+            is_html=True,
+            pending_reason_id=10,
+            attachments=attachments
+        )
+
+        # 検証
+        client_mock.post.assert_called_once_with('123/mails', data={
+            "status_cd": "open",
+            "mail_account_id": 1,
+            "to": "test@example.com",
+            "subject": "テストメール",
+            "body": "これはテストメールです。",
+            "is_html": True,
+            "cc": "cc@example.com",
+            "bcc": "bcc@example.com",
+            "reply_to": "reply@example.com",
+            "pending_reason_id": 10,
+            "attachments": attachments
+        })
+
+        assert result == {
+            "message_id": 111,
+            "ticket_id": 222
+        }
+
+    def test_reply_all_options(self, mail_resource, client_mock):
+        """reply()メソッドの全オプション指定テスト (attachments含む)"""
+        attachments = [{"file_name": "b.txt", "data": "yyy"}]
+        # 実行
+        result = mail_resource.reply(
+            message_box_id=123,
+            message_id=456,
+            mail_account_id=1,
+            to="test@example.com",
+            subject="Re: テストメール",
+            body="返信します。",
+            status_cd="open",
+            cc="cc@example.com",
+            bcc="bcc@example.com",
+            is_html=True,
+            pending_reason_id=10,
+            attachments=attachments
+        )
+
+        # 検証
+        client_mock.post.assert_called_once_with('123/mails/reply', data={
+            "message_id": 456,
+            "status_cd": "open",
+            "mail_account_id": 1,
+            "to": "test@example.com",
+            "subject": "Re: テストメール",
+            "body": "返信します。",
+            "is_html": True,
+            "cc": "cc@example.com",
+            "bcc": "bcc@example.com",
+            "pending_reason_id": 10,
+            "attachments": attachments
+        })
+
+        assert result == {
+            "message_id": 111,
+            "ticket_id": 222
+        }
+
+    def test_draft_all_options(self, mail_resource, client_mock):
+        """draft()メソッドの全オプション指定テスト (reply_to/attachments含む)"""
+        attachments = [{"file_name": "c.txt", "data": "zzz"}]
+        # 実行
+        result = mail_resource.draft(
+            message_box_id=123,
+            mail_account_id=1,
+            to="test@example.com",
+            subject="下書きメール",
+            body="これは下書きメールです。",
+            message_id=789,
+            status_cd="open",
+            cc="cc@example.com",
+            bcc="bcc@example.com",
+            reply_to="reply@example.com",
+            is_html=True,
+            pending_reason_id=10,
+            attachments=attachments
+        )
+
+        # 検証
+        client_mock.post.assert_called_once_with('123/mails/draft', data={
+            "status_cd": "open",
+            "mail_account_id": 1,
+            "to": "test@example.com",
+            "subject": "下書きメール",
+            "body": "これは下書きメールです。",
+            "is_html": True,
+            "cc": "cc@example.com",
+            "bcc": "bcc@example.com",
+            "reply_to": "reply@example.com",
+            "message_id": 789,
+            "pending_reason_id": 10,
+            "attachments": attachments
+        })
+
+        assert result == {
+            "message_id": 111,
+            "ticket_id": 222
+        }
+
+    def test_send_omits_optionals(self, mail_resource, client_mock):
+        """send()メソッドでオプション省略時にbodyに含まれないことの確認"""
+        # 実行
+        mail_resource.send(
+            message_box_id=123,
+            mail_account_id=1,
+            to="test@example.com",
+            subject="テストメール",
+            body="本文"
+        )
+
+        # 検証: オプションキーが本文に含まれないこと
+        _, kwargs = client_mock.post.call_args
+        data = kwargs["data"]
+        for key in ("cc", "bcc", "reply_to", "pending_reason_id", "attachments"):
+            assert key not in data
+
     def test_draft_new(self, mail_resource, client_mock):
         """draft()メソッドの新規下書きテスト"""
         # 実行
