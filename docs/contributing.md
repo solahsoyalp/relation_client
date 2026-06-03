@@ -141,13 +141,18 @@ pytest --cov=relation_client tests/
 
 ## リリースプロセス
 
-リリースは以下のプロセスで行われます：
+リリースは **PyPI Trusted Publisher（GitHub Actions OIDC）** により自動化されています。
+`v*` タグを push すると、`.github/workflows/publish.yml` がビルド・検証・PyPI 公開を
+自動で行います（API トークンの手動管理は不要）。
 
-1. バージョン番号の更新 (`__init__.py`内の`__version__`変数)
-2. CHANGELOGの更新
-3. ドキュメントの更新
-4. タグの作成とリリース
-5. PyPIへのパッケージのアップロード
+1. バージョン番号の更新 (`__init__.py` 内の `__version__` 変数)
+2. CHANGELOG の更新
+3. PR を作成して `main` にマージ（CI green を確認）
+4. タグの作成と push（例 `git tag -a v0.4.0 -m "Release 0.4.0" && git push origin v0.4.0`）
+5. `publish.yml` が PyPI へ自動公開
+6. GitHub Release を作成（任意）
+
+詳細な手順と PyPI 側の初回設定は、リポジトリ直下の [`RELEASING.md`](../RELEASING.md) を参照してください。
 
 ---
 

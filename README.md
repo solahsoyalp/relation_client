@@ -731,6 +731,10 @@ pytest --cov=relation_client tests/
 4. ブランチをプッシュする：`git push origin my-new-feature`
 5. プルリクエストを作成する：https://github.com/solahsoyalp/relation_client/pulls
 
+## リリース
+
+`v*` タグを push すると、**PyPI Trusted Publisher（GitHub Actions OIDC）** により PyPI へ自動公開されます（API トークンの手動管理は不要）。手順とPyPI側の初回設定は [RELEASING.md](RELEASING.md) を参照してください。
+
 ## 問い合わせ
 
 質問や問題がある場合は、[GitHub Issues](https://github.com/solahsoyalp/relation_client/issues)で報告してください。
@@ -850,6 +854,10 @@ Contributions are welcome! We look forward to bug reports, feature requests, pul
 3. Commit your changes: `git commit -am 'Add some feature'`
 4. Push to the branch: `git push origin my-new-feature`
 5. Create a pull request: https://github.com/solahsoyalp/relation_client/pulls
+
+## Releasing
+
+Pushing a `v*` tag automatically publishes to PyPI via **Trusted Publishing (GitHub Actions OIDC)** — no manual API token management required. See [RELEASING.md](RELEASING.md) for the steps and the one-time PyPI setup.
 
 ## Contact
 
