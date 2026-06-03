@@ -20,6 +20,13 @@
 - 例外 `PermissionError` を `RelationPermissionError` にリネーム（Python 組込みとの衝突を回避）。旧名は後方互換エイリアスとして維持。例外クラスをトップレベル（`relation_client`）からエクスポート
 - OpenAPI 3.0 仕様を単一ソースとして扱う仕組みを追加（`scripts/sync_openapi.py` で公式仕様を取得、`spec/` 配下に同期。整合性テスト `test_openapi_consistency.py` を追加。仕様未同期時はスキップ）
 
+### セキュリティ
+- **subdomain を検証**（#2）: `RelationClient` 初期化時に `subdomain` を単一DNSラベルとして検証し、`Authorization: Bearer` トークンが意図しないホストへ送信されるのを防止（不正値は `ValueError`）
+- **パスパラメータの URL エンコード**（#5）: `CustomerResource` の `email` / `system_id1` を `urllib.parse.quote` でエンコードし、パス／クエリの変形を防止
+- **依存脆弱性対応**（#3）: `requests` を環境マーカーで Python 別に最も安全なバージョンへ（3.10+: `>=2.33.0` / 3.8・3.9: `>=2.32.4`）。`SECURITY.md` を新設し方針と残存リスクを明文化。CI に `pip-audit` 依存監査ジョブを追加
+- **README 添付ダウンロード例の安全化**（#4）: API 由来の `file_name` を `os.path.basename` で正規化し保存先を限定（パストラバーサル対策）。`raise_for_status()`・`timeout` を追加
+- `.gitignore` に `.praeco/`（ローカルツールキャッシュ）を追加し誤コミットを防止
+
 ### 修正
 - **メール送信が失敗する不具合を修正**: `MailResource.send()` のエンドポイントが誤って `{message_box_id}/mails/send` になっていたため、正しい `{message_box_id}/mails` に修正。必須フィールド `status_cd` の欠落も修正
 - ネットワークエラー時のリトライを冪等メソッド（GET / DELETE）のみに限定。POST / PUT はタイムアウト時にメール二重送信などの副作用が重複する恐れがあるためリトライしないよう修正
