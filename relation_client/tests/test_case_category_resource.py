@@ -3,7 +3,6 @@
 
 このモジュールは、CaseCategoryResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
 
@@ -39,13 +38,13 @@ class TestCaseCategoryResource:
                 "archived": False
             }
         ]
-        
+
         # create メソッドのレスポンスを設定
         client.post.return_value = {"case_category_id": 4}
-        
+
         # update メソッドのレスポンスを設定（204 No Content を想定）
         client.put.return_value = {}
-        
+
         return client
 
     @pytest.fixture
@@ -63,19 +62,19 @@ class TestCaseCategoryResource:
         assert isinstance(result, list)
         assert len(result) == 3
         assert isinstance(result[0], CaseCategory)
-        
+
         # 1番目のチケット分類を検証
         assert result[0].case_category_id == 1
         assert result[0].name == "お問い合わせ"
         assert result[0].parent_id is None
         assert result[0].archived is False
-        
+
         # 2番目のチケット分類を検証
         assert result[1].case_category_id == 2
         assert result[1].name == "お問い合わせ > 顧客"
         assert result[1].parent_id == 1
         assert result[1].archived is True
-        
+
         # 3番目のチケット分類を検証
         assert result[2].case_category_id == 3
         assert result[2].name == "サポート"
@@ -145,4 +144,4 @@ class TestCaseCategoryResource:
         )
 
         # 検証
-        client_mock.put.assert_called_once_with('123/case_categories/1', data={'name': '名前のみ更新'}) 
+        client_mock.put.assert_called_once_with('123/case_categories/1', data={'name': '名前のみ更新'})

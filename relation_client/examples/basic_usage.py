@@ -5,13 +5,12 @@ Re:lation API クライアントライブラリの基本的な使用例
 
 import os
 import sys
-from pprint import pprint
 
 # パッケージのインポートパスを追加
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from relation_client import RelationClient
-from relation_client.exceptions import (
+from relation_client import RelationClient  # noqa: E402
+from relation_client.exceptions import (  # noqa: E402
     AuthenticationError, PermissionError, ResourceNotFoundError, APIError
 )
 
@@ -60,7 +59,7 @@ def main():
 
         # 新しい顧客の作成
         print('\n--- 顧客作成 ---')
-        
+
         # 実際に作成する場合はコメントを外してください
         """
         new_customer = client.customers.create(
@@ -72,14 +71,14 @@ def main():
             system_id1='TEST001'
         )
         print(f'作成された顧客: ID={new_customer.customer_id}, 名前={new_customer.last_name} {new_customer.first_name}')
-        
+
         # 作成した顧客の取得
         retrieved_customer = client.customers.get_by_system_id1(
             customer_group_id=customer_group_id,
             system_id1='TEST001'
         )
         print(f'取得した顧客: ID={retrieved_customer.customer_id}, 名前={retrieved_customer.last_name} {retrieved_customer.first_name}')
-        
+
         # 顧客の更新
         updated_customer = client.customers.update_by_system_id1(
             customer_group_id=customer_group_id,
@@ -87,7 +86,7 @@ def main():
             company_name='株式会社テスト'
         )
         print(f'更新された顧客: ID={updated_customer.customer_id}, 会社名={updated_customer.company_name}')
-        
+
         # 顧客の削除
         client.customers.delete_by_system_id1(
             customer_group_id=customer_group_id,
@@ -109,4 +108,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main() 
+    main()

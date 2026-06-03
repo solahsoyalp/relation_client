@@ -29,4 +29,4 @@ class PendingReasonResource:
             List[PendingReason]: 保留理由オブジェクトのリスト
         """
         response = self.client.get(f"{message_box_id}/pending_reasons")
-        return [PendingReason.from_dict(item) for item in response] 
+        return [PendingReason.from_dict(item) for item in response]

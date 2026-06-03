@@ -4,9 +4,9 @@ Re:lation APIクライアント
 このモジュールは、Re:lation APIとの通信を処理するメインクライアントクラスを提供します。
 """
 
-import json
+import re
 import time
-from typing import Dict, Any, Optional, Union, List, Type, TypeVar
+from typing import Dict, Any, Optional
 
 import requests
 
@@ -18,7 +18,7 @@ from .constants import (
     HTTP_SERVICE_UNAVAILABLE
 )
 from .exceptions import (
-    AuthenticationError, PermissionError, ResourceNotFoundError,
+    AuthenticationError, RelationPermissionError, ResourceNotFoundError,
     RateLimitError, InvalidRequestError, APIError, ServiceUnavailableError
 )
 from .resources.customers import CustomerResource
@@ -37,12 +37,39 @@ from .resources.templates import TemplateResource
 from .resources.attachments import AttachmentResource
 
 
+# サブドメインとして許可する単一DNSラベル（英小数字とハイフン、先頭末尾は英数字、最大63文字）。
+# 認証トークン(Authorization: Bearer)が意図しないホストへ送信されるのを防ぐため、
+# URLホストを変形し得る文字（'/', '?', '@', '.', 大文字など）を含む値は拒否する。
+_SUBDOMAIN_PATTERN = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
+
+
 class RelationClient:
     """Re:lation APIクライアント
 
     このクラスは、Re:lation APIと通信するための基本クライアントを提供します。
     各エンドポイントへのアクセスは、リソースクラス経由で行います。
     """
+
+    @staticmethod
+    def _validate_subdomain(subdomain: str) -> str:
+        """サブドメインが単一DNSラベルとして妥当か検証する。
+
+        Args:
+            subdomain: 検証対象のサブドメイン
+
+        Returns:
+            検証済みのサブドメイン
+
+        Raises:
+            ValueError: サブドメインが不正な場合（URLホストを変形し得る値を含む等）
+        """
+        if not isinstance(subdomain, str) or not _SUBDOMAIN_PATTERN.match(subdomain):
+            raise ValueError(
+                "subdomain は単一のDNSラベル（英小文字・数字・ハイフン、"
+                "先頭末尾は英数字、最大63文字）である必要があります: "
+                f"{subdomain!r}"
+            )
+        return subdomain
 
     def __init__(
         self,
@@ -64,18 +91,21 @@ class RelationClient:
             retry_delay: リトライ間の待機秒数
         """
         self.access_token = access_token
-        self.subdomain = subdomain
+        # 認証トークンの外部送信を防ぐため、サブドメインを検証する
+        self.subdomain = self._validate_subdomain(subdomain)
         self.api_version = api_version
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        
+
         self._session = requests.Session()
+        # 直近のレスポンスから取得したレートリミット情報を保持する
+        self.last_rate_limit: Optional[Dict[str, Optional[int]]] = None
         self._base_url = BASE_URL_FORMAT.format(
             subdomain=self.subdomain,
             api_version=self.api_version
         )
-        
+
         # リソースの初期化
         self.customers = CustomerResource(self)
         self.customer_groups = CustomerGroupResource(self)
@@ -91,7 +121,7 @@ class RelationClient:
         self.mails = MailResource(self)
         self.templates = TemplateResource(self)
         self.attachments = AttachmentResource(self)
-        
+
     def request(
         self,
         method: str,
@@ -127,7 +157,12 @@ class RelationClient:
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         }
-        
+
+        # 冪等なメソッド (GET, DELETE) のみネットワークエラー時にリトライする。
+        # POST/PUT はサーバ側で処理が完了した後にタイムアウトが発生する可能性があり、
+        # 盲目的にリトライするとメール二重送信などの副作用が重複する恐れがあるためリトライしない。
+        idempotent = method.upper() in ("GET", "DELETE")
+
         retry_count = 0
         while retry_count <= self.max_retries:
             try:
@@ -140,7 +175,10 @@ class RelationClient:
                     json=json_data,
                     timeout=self.timeout
                 )
-                
+
+                # レスポンスヘッダからレートリミット情報を解析して保持する
+                self._update_rate_limit(response)
+
                 # レスポンスを処理
                 if response.status_code < 400:
                     # 成功レスポンス
@@ -150,14 +188,14 @@ class RelationClient:
                         return response.json()
                     except ValueError:
                         return {"data": response.text}
-                
+
                 # エラーレスポンスの処理
                 error_message = self._extract_error_message(response)
-                
+
                 if response.status_code == HTTP_UNAUTHORIZED:
                     raise AuthenticationError(error_message, response)
                 elif response.status_code == HTTP_FORBIDDEN:
-                    raise PermissionError(error_message, response)
+                    raise RelationPermissionError(error_message, response)
                 elif response.status_code == HTTP_NOT_FOUND:
                     raise ResourceNotFoundError(error_message, response)
                 elif response.status_code == HTTP_TOO_MANY_REQUESTS:
@@ -181,18 +219,19 @@ class RelationClient:
                     raise ServiceUnavailableError(error_message, response)
                 else:
                     raise APIError(f"予期しないステータスコード: {response.status_code}", response)
-                
+
             except (requests.ConnectionError, requests.Timeout) as e:
-                # 接続エラーやタイムアウトのリトライ
-                if retry_count < self.max_retries:
+                # 接続エラーやタイムアウトのリトライ。
+                # 非冪等なメソッド (POST, PUT) は副作用の重複を避けるため即座に例外を送出する。
+                if idempotent and retry_count < self.max_retries:
                     time.sleep(self.retry_delay)
                     retry_count += 1
                     continue
                 raise APIError(f"接続エラー: {str(e)}")
-                
+
         # ここに到達することはないはず
         raise APIError("予期しないエラー: 最大リトライ回数を超えました")
-    
+
     def _extract_error_message(self, response: requests.Response) -> str:
         """レスポンスからエラーメッセージを抽出"""
         try:
@@ -205,19 +244,55 @@ class RelationClient:
             return str(error_data)
         except (ValueError, KeyError):
             return response.text or f"HTTPエラー {response.status_code}"
-            
+
+    def _update_rate_limit(self, response: requests.Response) -> None:
+        """レスポンスヘッダからレートリミット情報を解析し self.last_rate_limit に保持する
+
+        ヘッダが存在しない、または整数に変換できない場合は None を設定する。
+        この処理は決して例外を送出しない。
+        """
+        def _parse(name: str) -> Optional[int]:
+            try:
+                value = response.headers.get(name)
+            except Exception:
+                return None
+            if value is None:
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        self.last_rate_limit = {
+            "limit": _parse(RATE_LIMIT_LIMIT),
+            "remaining": _parse(RATE_LIMIT_REMAINING),
+            "reset": _parse(RATE_LIMIT_RESET),
+        }
+
     def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """GETリクエストを実行"""
         return self.request('GET', path, params=params)
-        
+
     def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """POSTリクエストを実行"""
         return self.request('POST', path, json_data=data)
-        
+
     def put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """PUTリクエストを実行"""
         return self.request('PUT', path, json_data=data)
-        
+
     def delete(self, path: str) -> Dict[str, Any]:
         """DELETEリクエストを実行"""
-        return self.request('DELETE', path) 
+        return self.request('DELETE', path)
+
+    def close(self) -> None:
+        """内部のHTTPセッションをクローズする"""
+        self._session.close()
+
+    def __enter__(self) -> "RelationClient":
+        """コンテキストマネージャーとして利用するための入口（自身を返す）"""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        """コンテキスト終了時にセッションをクローズする"""
+        self.close()

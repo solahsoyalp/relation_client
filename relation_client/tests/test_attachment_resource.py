@@ -47,11 +47,11 @@ class TestAttachmentResource:
         """エラーレスポンスの場合のget_download_url()メソッドのテスト"""
         # モックの設定
         client_mock.get.return_value = {"error": "リソースが見つかりません"}
-        
+
         # 実行
         result = attachment_resource.get_download_url(message_box_id=123, attachment_id=999)
-        
+
         # 検証
         client_mock.get.assert_called_once_with('123/messages/attachments/999')
         assert isinstance(result, dict)
-        assert "error" in result 
+        assert "error" in result

@@ -3,10 +3,8 @@
 
 このモジュールは、UserResourceクラスのテストを提供します。
 """
-import json
 import pytest
 from unittest import mock
-from datetime import datetime, timezone
 
 from relation_client.models import User
 from relation_client.resources.users import UserResource
@@ -62,7 +60,7 @@ class TestUserResource:
         assert isinstance(result, list)
         assert len(result) == 2
         assert isinstance(result[0], User)
-        
+
         # 1人目のユーザー情報を検証
         assert result[0].mention_name == "taro"
         assert result[0].status_cd == "available"
@@ -74,7 +72,7 @@ class TestUserResource:
         assert result[0].is_tenant_admin is True
         assert result[0].is_otp_required is False
         assert result[0].last_page_loaded_at.isoformat().replace('+00:00', 'Z') == "2024-01-09T05:18:36Z"
-        
+
         # 2人目のユーザー情報を検証
         assert result[1].mention_name == "hanako"
         assert result[1].status_cd == "available"
@@ -86,7 +84,7 @@ class TestUserResource:
         assert result[1].is_tenant_admin is False
         assert result[1].is_otp_required is True
         assert result[1].last_page_loaded_at.isoformat().replace('+00:00', 'Z') == "2024-01-09T05:20:36Z"
-        
+
     def test_list_with_default_params(self, user_resource, client_mock):
         """list()メソッドのデフォルトパラメータのテスト"""
         # 実行
@@ -95,4 +93,4 @@ class TestUserResource:
         # 検証
         client_mock.get.assert_called_once_with('users', params={})
         assert isinstance(result, list)
-        assert len(result) == 2 
+        assert len(result) == 2

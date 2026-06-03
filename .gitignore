@@ -2,7 +2,10 @@
 .DS_Store
 .AppleDouble
 .LSOverride
-.gitignore
+
+# ローカルツールキャッシュ（誤コミット防止の多層防御）
+.praeco/
+
 # Python
 __pycache__/
 *.py[cod]

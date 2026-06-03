@@ -5,8 +5,12 @@ RelationClientのテスト
 import unittest
 from unittest.mock import patch, MagicMock
 
+import requests
+
 from relation_client import RelationClient
-from relation_client.exceptions import AuthenticationError
+from relation_client.exceptions import (
+    AuthenticationError, APIError, RelationPermissionError, PermissionError
+)
 
 
 class TestRelationClient(unittest.TestCase):
@@ -27,6 +31,31 @@ class TestRelationClient(unittest.TestCase):
         self.assertEqual(self.client.subdomain, self.subdomain)
         self.assertEqual(self.client.api_version, 'v2')
         self.assertEqual(self.client._base_url, 'https://test.relationapp.jp/api/v2')
+
+    def test_valid_subdomains_accepted(self):
+        """正常なサブドメインは従来通り利用できることを確認"""
+        for sub in ('test', 'my-company', 'abc123', 'a', '0', 'a' * 63):
+            client = RelationClient(access_token='t', subdomain=sub)
+            self.assertEqual(client.subdomain, sub)
+            self.assertEqual(client._base_url, f'https://{sub}.relationapp.jp/api/v2')
+
+    def test_invalid_subdomain_rejected(self):
+        """ホスト名を変形し得るサブドメインが拒否されることを確認"""
+        invalid_values = [
+            'attacker.example/path',  # '/' でパス／ホストを変形
+            'evil.example',           # '.' で別ホストを指定
+            'a?b',                    # クエリ注入
+            'user@host',              # 認証情報部の注入
+            'sub domain',             # 空白
+            '-leading',               # 先頭ハイフン
+            'trailing-',              # 末尾ハイフン
+            'UPPER',                  # 大文字（小文字のみ許可）
+            '',                       # 空文字
+            'a' * 64,                 # 64文字（上限超過）
+        ]
+        for value in invalid_values:
+            with self.assertRaises(ValueError):
+                RelationClient(access_token='t', subdomain=value)
 
     @patch('requests.Session.request')
     def test_get_success(self, mock_request):
@@ -98,6 +127,113 @@ class TestRelationClient(unittest.TestCase):
         with self.assertRaises(AuthenticationError):
             self.client.get('test_path')
 
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_post_not_retried_on_connection_error(self, mock_request, mock_sleep):
+        """POSTは接続エラー時にリトライされず、APIErrorが送出されることを確認"""
+        # 接続エラーを常に発生させる
+        mock_request.side_effect = requests.ConnectionError("boom")
+
+        # 非冪等なPOSTはリトライされず即座にAPIErrorになる
+        with self.assertRaises(APIError):
+            self.client.post('test_path', {'name': 'test'})
+
+        # session.request は1回しか呼ばれない (リトライなし)
+        self.assertEqual(mock_request.call_count, 1)
+
+    @patch('time.sleep', return_value=None)
+    @patch('requests.Session.request')
+    def test_get_retried_on_connection_error(self, mock_request, mock_sleep):
+        """GETは接続エラー時にmax_retries回までリトライされることを確認"""
+        # 接続エラーを常に発生させる
+        mock_request.side_effect = requests.ConnectionError("boom")
+
+        # 冪等なGETはリトライされ、最終的にAPIErrorになる
+        with self.assertRaises(APIError):
+            self.client.get('test_path')
+
+        # 初回 + max_retries 回のリトライで合計 max_retries + 1 回呼ばれる
+        self.assertEqual(mock_request.call_count, self.client.max_retries + 1)
+
+    def test_permission_error_backward_compatible_alias(self):
+        """旧名 PermissionError が RelationPermissionError と同一クラスであることを確認"""
+        # エイリアスが同一クラスを指している
+        self.assertIs(PermissionError, RelationPermissionError)
+
+    @patch('requests.Session.request')
+    def test_permission_error_caught_by_old_name(self, mock_request):
+        """HTTP 403 が旧名 PermissionError でも捕捉できることを確認"""
+        # モックの設定
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.json.return_value = {'error': 'Forbidden'}
+        mock_request.return_value = mock_response
+
+        # 旧名 PermissionError で捕捉できる
+        with self.assertRaises(PermissionError):
+            self.client.get('test_path')
+
+    @patch('requests.Session.request')
+    def test_last_rate_limit_populated(self, mock_request):
+        """レスポンスヘッダから last_rate_limit が設定されることを確認"""
+        # モックの設定（レートリミットヘッダを含む）
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'data': 'test'}
+        mock_response.headers = {
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '59',
+            'X-RateLimit-Reset': '1700000000',
+        }
+        mock_request.return_value = mock_response
+
+        self.client.get('test_path')
+
+        # ヘッダが整数として解析されている
+        self.assertEqual(
+            self.client.last_rate_limit,
+            {'limit': 60, 'remaining': 59, 'reset': 1700000000}
+        )
+
+    @patch('requests.Session.request')
+    def test_last_rate_limit_missing_headers(self, mock_request):
+        """ヘッダが欠落／非整数の場合に None になることを確認"""
+        # モックの設定（ヘッダなし・非整数を含む）
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'data': 'test'}
+        mock_response.headers = {'X-RateLimit-Limit': 'not-a-number'}
+        mock_request.return_value = mock_response
+
+        self.client.get('test_path')
+
+        # 欠落・非整数のヘッダは None になる
+        self.assertEqual(
+            self.client.last_rate_limit,
+            {'limit': None, 'remaining': None, 'reset': None}
+        )
+
+    def test_context_manager_closes_session(self):
+        """コンテキストマネージャー終了時にセッションがクローズされることを確認"""
+        # セッションの close をモック
+        self.client._session.close = MagicMock()
+
+        with self.client as c:
+            # __enter__ は自身を返す
+            self.assertIs(c, self.client)
+
+        # __exit__ で close が呼ばれている
+        self.client._session.close.assert_called_once()
+
+    def test_close_closes_session(self):
+        """close() がセッションをクローズすることを確認"""
+        # セッションの close をモック
+        self.client._session.close = MagicMock()
+
+        self.client.close()
+
+        self.client._session.close.assert_called_once()
+
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

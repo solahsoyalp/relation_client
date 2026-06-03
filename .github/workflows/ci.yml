@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: relation_client/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # requirements-dev.txt includes runtime deps via "-r requirements.txt"
+          # (resolved relative to the file's own directory).
+          pip install -r relation_client/requirements-dev.txt
+
+      # Lint: be pragmatic on a legacy codebase. Allow longer lines and ignore
+      # E501 (line too long) / W503 (line break before binary operator) so style
+      # nits don't block CI, while real errors (undefined names, etc.) still fail.
+      - name: Lint with flake8
+        run: flake8 relation_client --max-line-length=120 --extend-ignore=E501,W503
+
+      # Formatting check is informational; the codebase may not be black-clean yet.
+      - name: Check formatting with black
+        run: black --check relation_client
+        continue-on-error: true
+
+      # Import-sorting check is informational; existing imports may not be sorted.
+      - name: Check import order with isort
+        run: isort --check-only relation_client
+        continue-on-error: true
+
+      # Type checking is informational; the codebase may not be fully typed yet.
+      - name: Type check with mypy
+        run: mypy relation_client
+        continue-on-error: true
+
+      # Tests are the hard gate for CI; this step must pass.
+      - name: Run tests
+        run: python -m pytest relation_client/tests/ -q
+
+  # 依存パッケージの既知脆弱性を継続的に監査する (Issue #3)。
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: relation_client/requirements.txt
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      # 監査は情報提供目的（continue-on-error）。新たな advisory が出ても CI 全体を
+      # 即座にブロックせず、結果を可視化して対応判断できるようにする。
+      - name: Audit runtime dependencies
+        run: pip-audit -r relation_client/requirements.txt --strict
+        continue-on-error: true

@@ -4,8 +4,18 @@ Re:lation APIデータモデルモジュール
 このモジュールは、Re:lation APIから返されるデータオブジェクトのモデルクラスを定義します。
 """
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+
+
+def _parse_dt(value):
+    """ISO 8601 文字列を datetime に変換する。失敗時は None を返す。"""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (ValueError, TypeError):
+        return None
 
 
 @dataclass
@@ -20,6 +30,10 @@ class RelationObject:
         instance._raw_data = data
         return instance
 
+    def to_dict(self) -> Dict[str, Any]:
+        """元のAPIレスポンス辞書（_raw_data）のコピーを返す。"""
+        return dict(self._raw_data)
+
 
 @dataclass
 class Email:
@@ -30,6 +44,10 @@ class Email:
     def from_dict(cls, data: Dict[str, str]) -> 'Email':
         return cls(email=data.get('email', ''))
 
+    def to_dict(self) -> Dict[str, str]:
+        """メールアドレス情報を辞書に変換する。"""
+        return {'email': self.email}
+
 
 @dataclass
 class Tel:
@@ -39,6 +57,10 @@ class Tel:
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> 'Tel':
         return cls(tel=data.get('tel', ''))
+
+    def to_dict(self) -> Dict[str, str]:
+        """電話番号情報を辞書に変換する。"""
+        return {'tel': self.tel}
 
 
 @dataclass
@@ -67,7 +89,7 @@ class Customer(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Customer':
         """辞書からCustomerオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.customer_id = data.get('customer_id')
         instance.last_name = data.get('last_name')
         instance.first_name = data.get('first_name')
@@ -80,33 +102,29 @@ class Customer(RelationObject):
         instance.system_id1 = data.get('system_id1')
         instance.default_assignee = data.get('default_assignee')
         instance.default_assignee_id = data.get('default_assignee_id')
-        
+
         # メールアドレス
-        instance.emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email) 
+        instance.emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email)
                            for email in data.get('emails', [])]
-        
+
         # アーカイブメールアドレス
-        instance.archived_emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email) 
+        instance.archived_emails = [Email.from_dict(email) if isinstance(email, dict) else Email(email=email)
                                     for email in data.get('archived_emails', [])]
-        
+
         # 電話番号
-        instance.tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel) 
+        instance.tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel)
                          for tel in data.get('tels', [])]
-        
+
         # アーカイブ電話番号
-        instance.archived_tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel) 
+        instance.archived_tels = [Tel.from_dict(tel) if isinstance(tel, dict) else Tel(tel=tel)
                                   for tel in data.get('archived_tels', [])]
-        
+
         # バッジID
         instance.badge_ids = data.get('badge_ids', [])
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         return instance
 
 
@@ -122,19 +140,15 @@ class CustomerGroup(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'CustomerGroup':
         """辞書からCustomerGroupオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.customer_group_id = data.get('customer_group_id')
         instance.name = data.get('name')
         instance.message_box_ids = data.get('message_box_ids', [])
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
+        return instance
 
 
 @dataclass
@@ -149,18 +163,14 @@ class Comment(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Comment':
         """辞書からCommentオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.commenter = data.get('commenter')
         instance.comment_type = data.get('comment_type')
         instance.comment = data.get('comment')
-        
+
         # コメント日時
-        if 'commented_at' in data and data['commented_at']:
-            try:
-                instance.commented_at = datetime.fromisoformat(data['commented_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.commented_at = _parse_dt(data.get('commented_at'))
+
         return instance
 
 
@@ -174,10 +184,35 @@ class Attachment(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Attachment':
         """辞書からAttachmentオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.attachment_id = data.get('attachment_id')
         instance.file_name = data.get('file_name')
-                
+
+        return instance
+
+
+@dataclass
+class Record(RelationObject):
+    """応対メモに紐づく顧客情報
+
+    method_cd が ``record`` のメッセージに付与される ``record`` フィールドを表します。
+    顧客情報が紐づかない場合、メッセージの ``record`` は ``None`` になります。
+    """
+    customer_id: Optional[int] = None
+    customer_name: Optional[str] = None
+    customer_emails: List[str] = field(default_factory=list)
+    customer_tels: List[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Record':
+        """辞書からRecordオブジェクトを作成"""
+        instance = super().from_dict(data)
+
+        instance.customer_id = data.get('customer_id')
+        instance.customer_name = data.get('customer_name')
+        instance.customer_emails = data.get('customer_emails', [])
+        instance.customer_tels = data.get('customer_tels', [])
+
         return instance
 
 
@@ -200,12 +235,13 @@ class Message(RelationObject):
     comments: List[Comment] = field(default_factory=list)
     attachments: List[Attachment] = field(default_factory=list)
     reply_to: Optional[str] = None
+    record: Optional['Record'] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Message':
         """辞書からMessageオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.message_id = data.get('message_id')
         instance.from_address = data.get('from')  # fromはPython予約語なのでfrom_addressに変更
         instance.to = data.get('to')
@@ -217,34 +253,27 @@ class Message(RelationObject):
         instance.action_cd = data.get('action_cd')
         instance.is_html = data.get('is_html', False)
         instance.reply_to = data.get('reply_to')
-        
+
         # 送信日時
-        if 'sent_at' in data and data['sent_at']:
-            try:
-                instance.sent_at = datetime.fromisoformat(data['sent_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.sent_at = _parse_dt(data.get('sent_at'))
+
         # 作成日時
-        if 'created_at' in data and data['created_at']:
-            try:
-                instance.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.created_at = _parse_dt(data.get('created_at'))
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         # コメント
         instance.comments = [Comment.from_dict(comment) for comment in data.get('comments', [])]
-        
+
         # 添付ファイル
         instance.attachments = [Attachment.from_dict(attachment) for attachment in data.get('attachments', [])]
-                
+
+        # 応対メモに紐づく顧客情報（method_cd が record の場合に付与。紐づかない場合は None）
+        record_data = data.get('record')
+        if isinstance(record_data, dict):
+            instance.record = Record.from_dict(record_data)
+
         return instance
 
 
@@ -267,7 +296,7 @@ class Ticket(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Ticket':
         """辞書からTicketオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.ticket_id = data.get('ticket_id')
         instance.assignee = data.get('assignee')
         instance.status_cd = data.get('status_cd')
@@ -276,25 +305,17 @@ class Ticket(RelationObject):
         instance.case_category_ids = data.get('case_category_ids', [])
         instance.label_ids = data.get('label_ids', [])
         instance.pending_reason_id = data.get('pending_reason_id')
-        
+
         # 作成日時
-        if 'created_at' in data and data['created_at']:
-            try:
-                instance.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.created_at = _parse_dt(data.get('created_at'))
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-        
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
         # メッセージ
         if 'messages' in data:
             instance.messages = [Message.from_dict(message) for message in data.get('messages', [])]
-                
+
         return instance
 
 
@@ -309,12 +330,12 @@ class ChatConversation(RelationObject):
     note: Optional[str] = None
     file_name: Optional[str] = None
     auto_send: Optional[bool] = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatConversation':
         """辞書からChatConversationオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.action_cd = data.get('action_cd')
         instance.speaker_name = data.get('speaker_name')
         instance.sent_by = data.get('sent_by')
@@ -322,14 +343,10 @@ class ChatConversation(RelationObject):
         instance.note = data.get('note')
         instance.file_name = data.get('file_name')
         instance.auto_send = data.get('auto_send')
-        
+
         # 送信日時
-        if 'sent_at' in data and data['sent_at']:
-            try:
-                instance.sent_at = datetime.fromisoformat(data['sent_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
+        instance.sent_at = _parse_dt(data.get('sent_at'))
+
         return instance
 
 
@@ -337,7 +354,7 @@ class ChatConversation(RelationObject):
 class ChatPlusConversation(ChatConversation):
     """ChatPlus会話"""
     chatplus_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatPlusConversation':
         """辞書からChatPlusConversationオブジェクトを作成"""
@@ -350,7 +367,7 @@ class ChatPlusConversation(ChatConversation):
 class YahooConversation(ChatConversation):
     """Yahoo!ショッピング会話"""
     yahoo_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'YahooConversation':
         """辞書からYahooConversationオブジェクトを作成"""
@@ -363,7 +380,7 @@ class YahooConversation(ChatConversation):
 class RMesseConversation(ChatConversation):
     """R-Messe会話"""
     r_messe_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RMesseConversation':
         """辞書からRMesseConversationオブジェクトを作成"""
@@ -376,7 +393,7 @@ class RMesseConversation(ChatConversation):
 class LineConversation(ChatConversation):
     """LINE会話"""
     line_conversation_id: int = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'LineConversation':
         """辞書からLineConversationオブジェクトを作成"""
@@ -394,22 +411,22 @@ class ChatPlus(RelationObject):
     company_name: str = None
     site: str = None
     conversations: List[ChatPlusConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatPlus':
         """辞書からChatPlusオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.account_key = data.get('account_key')
         instance.email = data.get('email')
         instance.company_name = data.get('company_name')
         instance.site = data.get('site')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [ChatPlusConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -427,12 +444,12 @@ class Yahoo(RelationObject):
     item_number: str = None
     item_url: str = None
     conversations: List[YahooConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Yahoo':
         """辞書からYahooオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.store_account = data.get('store_account')
         instance.email = data.get('email')
@@ -443,11 +460,11 @@ class Yahoo(RelationObject):
         instance.order_url = data.get('order_url')
         instance.item_number = data.get('item_number')
         instance.item_url = data.get('item_url')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [YahooConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -465,13 +482,14 @@ class RMesse(RelationObject):
     item_number: str = None
     item_name: str = None
     item_url: str = None
+    social_gift_user_type: Optional[str] = None
     conversations: List[RMesseConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'RMesse':
         """辞書からRMesseオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.email = data.get('email')
         instance.inquiry_status = data.get('inquiry_status')
@@ -483,11 +501,13 @@ class RMesse(RelationObject):
         instance.item_number = data.get('item_number')
         instance.item_name = data.get('item_name')
         instance.item_url = data.get('item_url')
-        
+        # ソーシャルギフトのユーザー種別（"注文者" / "受取人" / None）
+        instance.social_gift_user_type = data.get('social_gift_user_type')
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [RMesseConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -498,20 +518,20 @@ class Line(RelationObject):
     channel_id: str = None
     group_name: str = None
     conversations: List[LineConversation] = field(default_factory=list)
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Line':
         """辞書からLineオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.account = data.get('account')
         instance.channel_id = data.get('channel_id')
         instance.group_name = data.get('group_name')
-        
+
         # 会話
         if 'conversations' in data:
             instance.conversations = [LineConversation.from_dict(conv) for conv in data.get('conversations', [])]
-                
+
         return instance
 
 
@@ -528,20 +548,16 @@ class MessageBox(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'MessageBox':
         """辞書からMessageBoxオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.message_box_id = data.get('message_box_id')
         instance.name = data.get('name')
         instance.color = data.get('color')
         instance.customer_group_id = data.get('customer_group_id')
-        
+
         # 更新日時
-        if 'last_updated_at' in data and data['last_updated_at']:
-            try:
-                instance.last_updated_at = datetime.fromisoformat(data['last_updated_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_updated_at = _parse_dt(data.get('last_updated_at'))
+
+        return instance
 
 
 @dataclass
@@ -556,13 +572,13 @@ class PendingReason(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'PendingReason':
         """辞書からPendingReasonオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.pending_reason_id = data.get('pending_reason_id')
         instance.name = data.get('name')
         instance.is_snoozed = data.get('is_snoozed', False)
         instance.snooze_term = data.get('snooze_term')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -583,7 +599,7 @@ class User(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'User':
         """辞書からUserオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.mention_name = data.get('mention_name')
         instance.status_cd = data.get('status_cd')
         instance.first_name = data.get('first_name')
@@ -593,15 +609,11 @@ class User(RelationObject):
         instance.email = data.get('email')
         instance.is_tenant_admin = data.get('is_tenant_admin', False)
         instance.is_otp_required = data.get('is_otp_required', False)
-        
+
         # 最終アクセス日時
-        if 'last_page_loaded_at' in data and data['last_page_loaded_at']:
-            try:
-                instance.last_page_loaded_at = datetime.fromisoformat(data['last_page_loaded_at'].replace('Z', '+00:00'))
-            except (ValueError, TypeError):
-                pass
-                
-        return instance 
+        instance.last_page_loaded_at = _parse_dt(data.get('last_page_loaded_at'))
+
+        return instance
 
 
 @dataclass
@@ -616,13 +628,13 @@ class CaseCategory(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'CaseCategory':
         """辞書からCaseCategoryオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.case_category_id = data.get('case_category_id')
         instance.name = data.get('name')
         instance.parent_id = data.get('parent_id')
         instance.archived = data.get('archived', False)
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -637,13 +649,13 @@ class Label(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Label':
         """辞書からLabelオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.label_id = data.get('label_id')
         instance.name = data.get('name')
         instance.color = data.get('color')
         instance.parent_id = data.get('parent_id')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -656,11 +668,11 @@ class Badge(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'Badge':
         """辞書からBadgeオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.badge_id = data.get('badge_id')
         instance.name = data.get('name')
-                
-        return instance 
+
+        return instance
 
 
 @dataclass
@@ -674,11 +686,11 @@ class MailAccount(RelationObject):
     def from_dict(cls, data: Dict[str, Any]) -> 'MailAccount':
         """辞書からMailAccountオブジェクトを作成"""
         instance = super().from_dict(data)
-        
+
         instance.mail_account_id = data.get('mail_account_id')
         instance.name = data.get('name')
         instance.email = data.get('email')
-                
+
         return instance
 
 

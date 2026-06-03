@@ -121,33 +121,33 @@ class TestTemplateResource:
         """空のレスポンスを返す場合のlist()メソッドのテスト"""
         # モックの設定
         client_mock.get.return_value = []
-        
+
         # 実行
         templates = template_resource.list(message_box_id=123)
-        
+
         # 検証
         assert templates == []
         assert len(templates) == 0
-        
+
     def test_search_empty_response(self, template_resource, client_mock):
         """空のレスポンスを返す場合のsearch()メソッドのテスト"""
         # モックの設定
         client_mock.post.return_value = []
-        
+
         # 実行
         templates = template_resource.search(message_box_id=123, template_category_name="存在しないカテゴリ")
-        
+
         # 検証
         assert templates == []
         assert len(templates) == 0
-        
+
     def test_list_non_list_response(self, template_resource, client_mock):
         """リスト以外のレスポンスを返す場合のlist()メソッドのテスト"""
         # モックの設定
         client_mock.get.return_value = {"error": "何らかのエラー"}
-        
+
         # 実行
         templates = template_resource.list(message_box_id=123)
-        
+
         # 検証
-        assert templates == [] 
+        assert templates == []
