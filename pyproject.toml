@@ -44,8 +44,10 @@ Source = "https://github.com/solahsoyalp/relation_client"
 [tool.setuptools.dynamic]
 version = { attr = "relation_client.__version__" }
 
-[tool.setuptools.packages.find]
-exclude = ["tests", "tests.*"]
+# 配布物にはライブラリ本体のみを明示列挙して含める。
+# tests / examples / 開発用 scripts は配布物に含めない。
+[tool.setuptools]
+packages = ["relation_client", "relation_client.resources"]
 
 [tool.setuptools.package-data]
 relation_client = ["py.typed"]

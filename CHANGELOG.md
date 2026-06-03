@@ -7,6 +7,11 @@
 ## [Unreleased] - 未リリース
 
 ### 追加
+- 次回リリースの変更をここに記載します
+
+## [0.2.0] - 2026-06-04
+
+### 追加
 - 公式API更新（2026/04）への対応
   - `Message` に `record` フィールドを追加（`method_cd` が `record` の応対メモに紐づく顧客情報。顧客情報が紐づかない場合は `None`）。新規 `Record` モデル（`customer_id` / `customer_name` / `customer_emails` / `customer_tels`）を追加
   - R-Messe（`RMesse`）に `social_gift_user_type` フィールドを追加（ソーシャルギフトのユーザー種別: `"注文者"` / `"受取人"` / `None`）
@@ -77,6 +82,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- Changes for the next release will be documented here
+
+## [0.2.0] - 2026-06-04
 
 ### Added
 - Support for the official API update (2026/04)
