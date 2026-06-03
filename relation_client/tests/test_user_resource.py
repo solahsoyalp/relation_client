@@ -94,3 +94,46 @@ class TestUserResource:
         client_mock.get.assert_called_once_with('users', params={})
         assert isinstance(result, list)
         assert len(result) == 2
+
+    def test_iter_all_multi_page(self, user_resource, client_mock):
+        """iter_all()メソッドの複数ページのテスト"""
+        # フルページ(per_page=2)の後に短いページ(1件)を返すことで停止させる
+        full_page = [
+            {"mention_name": "u1", "email": "u1@example.com"},
+            {"mention_name": "u2", "email": "u2@example.com"},
+        ]
+        short_page = [
+            {"mention_name": "u3", "email": "u3@example.com"},
+        ]
+        client_mock.get.side_effect = [full_page, short_page]
+
+        result = list(user_resource.iter_all(per_page=2))
+
+        assert len(result) == 3
+        assert all(isinstance(user, User) for user in result)
+        assert [user.mention_name for user in result] == ["u1", "u2", "u3"]
+        assert client_mock.get.call_count == 2
+        client_mock.get.assert_any_call('users', params={'per_page': 2, 'page': 1})
+        client_mock.get.assert_any_call('users', params={'per_page': 2, 'page': 2})
+
+    def test_iter_all_single_short_page(self, user_resource, client_mock):
+        """iter_all()メソッドが1ページ目で停止するテスト(デフォルトper_page)"""
+        # デフォルトの停止判定件数(30)未満なので1ページで停止する
+        client_mock.get.return_value = [
+            {"mention_name": "only", "email": "only@example.com"},
+        ]
+
+        result = list(user_resource.iter_all())
+
+        assert len(result) == 1
+        assert client_mock.get.call_count == 1
+        client_mock.get.assert_called_once_with('users', params={'page': 1})
+
+    def test_iter_all_empty(self, user_resource, client_mock):
+        """iter_all()メソッドが0件のとき即停止するテスト"""
+        client_mock.get.return_value = []
+
+        result = list(user_resource.iter_all(per_page=10))
+
+        assert result == []
+        assert client_mock.get.call_count == 1

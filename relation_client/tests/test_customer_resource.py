@@ -268,6 +268,294 @@ class TestCustomerResource(unittest.TestCase):
             'customer_groups/1/customers/system_id1/a%2Fb%20%E5%A4%AA%E9%83%8E'
         )
 
+    @patch.object(RelationClient, 'get')
+    def test_search_with_all_optional_params(self, mock_get):
+        """search が全オプションパラメータのブランチを設定することを確認"""
+        mock_get.return_value = []
+
+        self.client.customers.search(
+            customer_group_id=self.customer_group_id,
+            customer_ids=[1, 2],
+            gender_cds=[1, 2],
+            system_id1s=['EMP0001'],
+            default_assignees=['@taro'],
+            emails=['test@example.com'],
+            tels=['09000000000'],
+            badge_ids=[10, 20],
+            per_page=50,
+            page=3
+        )
+
+        mock_get.assert_called_once_with(
+            'customer_groups/1/customers/search',
+            params={
+                'per_page': 50,
+                'page': 3,
+                'customer_ids[]': [1, 2],
+                'gender_cds[]': [1, 2],
+                'system_id1s[]': ['EMP0001'],
+                'default_assignees[]': ['@taro'],
+                'emails[]': ['test@example.com'],
+                'tels[]': ['09000000000'],
+                'badge_ids[]': [10, 20],
+            }
+        )
+
+    @patch.object(RelationClient, 'post')
+    def test_create_with_all_optional_fields(self, mock_post):
+        """create が全オプションフィールドのブランチを設定することを確認"""
+        mock_post.return_value = {
+            'customer_id': 5,
+            'last_name': '大阪',
+            'first_name': '太郎',
+            'gender_cd': 1,
+            'system_id1': 'EMP0005',
+        }
+
+        emails = [{'email': 'osaka@example.com'}]
+        archived_emails = [{'email': 'old@example.com'}]
+        tels = [{'tel': '09000000000'}]
+        archived_tels = [{'tel': '08000000000'}]
+
+        result = self.client.customers.create(
+            customer_group_id=self.customer_group_id,
+            last_name='大阪',
+            first_name='太郎',
+            last_name_kana='オオサカ',
+            first_name_kana='タロウ',
+            company_name='テスト株式会社',
+            title='部長',
+            url='https://example.com',
+            gender_cd=1,
+            default_assignee='@taro',
+            emails=emails,
+            archived_emails=archived_emails,
+            tels=tels,
+            archived_tels=archived_tels,
+            badge_ids=[1, 2],
+            system_id1='EMP0005',
+        )
+
+        mock_post.assert_called_once_with(
+            'customer_groups/1/customers/create',
+            data={
+                'last_name': '大阪',
+                'first_name': '太郎',
+                'last_name_kana': 'オオサカ',
+                'first_name_kana': 'タロウ',
+                'company_name': 'テスト株式会社',
+                'title': '部長',
+                'url': 'https://example.com',
+                'gender_cd': 1,
+                'default_assignee': '@taro',
+                'emails': emails,
+                'archived_emails': archived_emails,
+                'tels': tels,
+                'archived_tels': archived_tels,
+                'badge_ids': [1, 2],
+                'system_id1': 'EMP0005',
+            }
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.customer_id, 5)
+        self.assertEqual(result.system_id1, 'EMP0005')
+
+    @patch.object(RelationClient, 'post')
+    def test_create_with_no_optional_fields(self, mock_post):
+        """create がオプション未指定時に空のデータを送ることを確認"""
+        mock_post.return_value = {'customer_id': 7}
+
+        result = self.client.customers.create(
+            customer_group_id=self.customer_group_id
+        )
+
+        mock_post.assert_called_once_with(
+            'customer_groups/1/customers/create',
+            data={}
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.customer_id, 7)
+
+    @patch.object(RelationClient, 'get')
+    def test_get_by_email(self, mock_get):
+        """get_by_email メソッドが正しく動作することを確認"""
+        mock_get.return_value = {
+            'customer_id': 2,
+            'last_name': '京都',
+            'first_name': '花子',
+            'gender_cd': 2,
+            'emails': [{'email': 'kyoto@example.com'}],
+            'system_id1': 'EMP0002',
+        }
+
+        result = self.client.customers.get_by_email(
+            customer_group_id=self.customer_group_id,
+            email='kyoto@example.com'
+        )
+
+        mock_get.assert_called_once_with(
+            'customer_groups/1/customers/email/kyoto%40example.com'
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.customer_id, 2)
+        self.assertEqual(result.last_name, '京都')
+        self.assertEqual(result.emails[0].email, 'kyoto@example.com')
+
+    @patch.object(RelationClient, 'put')
+    def test_update_by_system_id1_with_all_fields(self, mock_put):
+        """update_by_system_id1 が全フィールドのブランチを設定することを確認"""
+        mock_put.return_value = {
+            'customer_id': 1,
+            'last_name': '東京',
+            'system_id1': 'EMP0001',
+        }
+
+        emails = [{'email': 'tokyo@example.com'}]
+        archived_emails = [{'email': 'old@example.com'}]
+        tels = [{'tel': '09000000000'}]
+        archived_tels = [{'tel': '08000000000'}]
+
+        result = self.client.customers.update_by_system_id1(
+            customer_group_id=self.customer_group_id,
+            system_id1='EMP0001',
+            last_name='東京',
+            first_name='次郎',
+            last_name_kana='トウキョウ',
+            first_name_kana='ジロウ',
+            company_name='テスト株式会社',
+            title='課長',
+            url='https://example.com',
+            gender_cd=1,
+            default_assignee='@jiro',
+            emails=emails,
+            archived_emails=archived_emails,
+            tels=tels,
+            archived_tels=archived_tels,
+            badge_ids=[3, 4],
+        )
+
+        mock_put.assert_called_once_with(
+            'customer_groups/1/customers/system_id1/EMP0001',
+            data={
+                'last_name': '東京',
+                'first_name': '次郎',
+                'last_name_kana': 'トウキョウ',
+                'first_name_kana': 'ジロウ',
+                'company_name': 'テスト株式会社',
+                'title': '課長',
+                'url': 'https://example.com',
+                'gender_cd': 1,
+                'default_assignee': '@jiro',
+                'emails': emails,
+                'archived_emails': archived_emails,
+                'tels': tels,
+                'archived_tels': archived_tels,
+                'badge_ids': [3, 4],
+            }
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.last_name, '東京')
+        self.assertEqual(result.system_id1, 'EMP0001')
+
+    @patch.object(RelationClient, 'put')
+    def test_update_by_email(self, mock_put):
+        """update_by_email メソッドが正しく動作することを確認"""
+        mock_put.return_value = {
+            'customer_id': 2,
+            'last_name': '京都',
+            'emails': [{'email': 'kyoto@example.com'}],
+            'system_id1': 'EMP0002',
+        }
+
+        result = self.client.customers.update_by_email(
+            customer_group_id=self.customer_group_id,
+            email='kyoto@example.com',
+            last_name='京都',
+            emails=[{'email': 'kyoto@example.com'}]
+        )
+
+        mock_put.assert_called_once_with(
+            'customer_groups/1/customers/email/kyoto%40example.com',
+            data={
+                'last_name': '京都',
+                'emails': [{'email': 'kyoto@example.com'}]
+            }
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.last_name, '京都')
+        self.assertEqual(result.emails[0].email, 'kyoto@example.com')
+
+    @patch.object(RelationClient, 'put')
+    def test_update_by_email_with_all_fields(self, mock_put):
+        """update_by_email が全フィールドのブランチを設定することを確認"""
+        mock_put.return_value = {
+            'customer_id': 2,
+            'last_name': '京都',
+            'system_id1': 'EMP0002',
+        }
+
+        emails = [{'email': 'kyoto@example.com'}]
+        archived_emails = [{'email': 'old@example.com'}]
+        tels = [{'tel': '09000000000'}]
+        archived_tels = [{'tel': '08000000000'}]
+
+        result = self.client.customers.update_by_email(
+            customer_group_id=self.customer_group_id,
+            email='kyoto@example.com',
+            last_name='京都',
+            first_name='花子',
+            last_name_kana='キョウト',
+            first_name_kana='ハナコ',
+            company_name='テスト株式会社',
+            title='主任',
+            url='https://example.com',
+            gender_cd=2,
+            default_assignee='@hanako',
+            emails=emails,
+            archived_emails=archived_emails,
+            tels=tels,
+            archived_tels=archived_tels,
+            badge_ids=[5, 6],
+            system_id1='EMP0002',
+        )
+
+        mock_put.assert_called_once_with(
+            'customer_groups/1/customers/email/kyoto%40example.com',
+            data={
+                'last_name': '京都',
+                'first_name': '花子',
+                'last_name_kana': 'キョウト',
+                'first_name_kana': 'ハナコ',
+                'company_name': 'テスト株式会社',
+                'title': '主任',
+                'url': 'https://example.com',
+                'gender_cd': 2,
+                'default_assignee': '@hanako',
+                'emails': emails,
+                'archived_emails': archived_emails,
+                'tels': tels,
+                'archived_tels': archived_tels,
+                'badge_ids': [5, 6],
+                'system_id1': 'EMP0002',
+            }
+        )
+        self.assertIsInstance(result, Customer)
+        self.assertEqual(result.system_id1, 'EMP0002')
+
+    @patch.object(RelationClient, 'delete')
+    def test_delete_by_email(self, mock_delete):
+        """delete_by_email メソッドが正しく動作することを確認"""
+        mock_delete.return_value = {}
+
+        self.client.customers.delete_by_email(
+            customer_group_id=self.customer_group_id,
+            email='kyoto@example.com'
+        )
+
+        mock_delete.assert_called_once_with(
+            'customer_groups/1/customers/email/kyoto%40example.com'
+        )
+
     @patch.object(RelationClient, 'delete')
     def test_delete_by_email_encodes_path_segment(self, mock_delete):
         """delete 系でも email がエンコードされることを確認"""

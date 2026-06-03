@@ -68,3 +68,54 @@ class TestMailAccountResource:
         client_mock.get.assert_called_once_with('123/mail_accounts', params={})
         assert isinstance(result, list)
         assert len(result) == 2
+
+    def test_list_non_list_response(self, mail_account_resource, client_mock):
+        """list()メソッドがリスト以外のレスポンスで空リストを返すテスト"""
+        client_mock.get.return_value = {"error": "not found"}
+
+        result = mail_account_resource.list(message_box_id=123)
+
+        assert result == []
+
+    def test_iter_all_multi_page(self, mail_account_resource, client_mock):
+        """iter_all()メソッドの複数ページのテスト"""
+        # フルページ(per_page=2)の後に短いページ(1件)を返すことで停止させる
+        full_page = [
+            {"mail_account_id": 1, "name": "アカウント1", "email": "a1@example.com"},
+            {"mail_account_id": 2, "name": "アカウント2", "email": "a2@example.com"},
+        ]
+        short_page = [
+            {"mail_account_id": 3, "name": "アカウント3", "email": "a3@example.com"},
+        ]
+        client_mock.get.side_effect = [full_page, short_page]
+
+        result = list(mail_account_resource.iter_all(message_box_id=123, per_page=2))
+
+        assert len(result) == 3
+        assert all(isinstance(account, MailAccount) for account in result)
+        assert [account.mail_account_id for account in result] == [1, 2, 3]
+        assert client_mock.get.call_count == 2
+        client_mock.get.assert_any_call('123/mail_accounts', params={'per_page': 2, 'page': 1})
+        client_mock.get.assert_any_call('123/mail_accounts', params={'per_page': 2, 'page': 2})
+
+    def test_iter_all_single_short_page(self, mail_account_resource, client_mock):
+        """iter_all()メソッドが1ページ目で停止するテスト(デフォルトper_page)"""
+        # デフォルトの停止判定件数(30)未満なので1ページで停止する
+        client_mock.get.return_value = [
+            {"mail_account_id": 1, "name": "アカウント1", "email": "a1@example.com"},
+        ]
+
+        result = list(mail_account_resource.iter_all(message_box_id=123))
+
+        assert len(result) == 1
+        assert client_mock.get.call_count == 1
+        client_mock.get.assert_called_once_with('123/mail_accounts', params={'page': 1})
+
+    def test_iter_all_empty(self, mail_account_resource, client_mock):
+        """iter_all()メソッドが0件のとき即停止するテスト"""
+        client_mock.get.return_value = []
+
+        result = list(mail_account_resource.iter_all(message_box_id=123, per_page=10))
+
+        assert result == []
+        assert client_mock.get.call_count == 1
