@@ -18,6 +18,10 @@ dependencies = [
     # 3.8/3.9 は 2.33.0 が 3.10+ 必須のため、動作可能な最新（2.32.4 以上）を要求。
     "requests>=2.33.0; python_version >= '3.10'",
     "requests>=2.32.4; python_version < '3.10'",
+    # urllib3（requests の推移的依存）の既知脆弱性対策（詳細は SECURITY.md 参照）。
+    # Python 3.10+ は 2.7.0 以上（CVE-2026-44431 / CVE-2026-44432 を回避）。
+    # 3.8/3.9 は 2.7.0 が 3.10+ 必須のため導入不可（残存リスクは SECURITY.md 参照）。
+    "urllib3>=2.7.0; python_version >= '3.10'",
     "pytz",
 ]
 classifiers = [
