@@ -2,28 +2,24 @@
 CustomerGroupResourceのテスト
 """
 
-import unittest
-from unittest.mock import patch
+import pytest
 
-from relation_client import RelationClient
 from relation_client.models import CustomerGroup
+from relation_client.resources.customer_groups import CustomerGroupResource
 
 
-class TestCustomerGroupResource(unittest.TestCase):
+class TestCustomerGroupResource:
     """CustomerGroupResourceのテストクラス"""
 
-    def setUp(self):
-        """テスト前の準備"""
-        self.client = RelationClient(
-            access_token='test_token',
-            subdomain='test'
-        )
+    @pytest.fixture
+    def customer_group_resource(self, client_mock):
+        """CustomerGroupResourceインスタンス"""
+        return CustomerGroupResource(client_mock)
 
-    @patch.object(RelationClient, 'get')
-    def test_list(self, mock_get):
+    def test_list(self, customer_group_resource, client_mock):
         """list メソッドが正しく動作することを確認"""
         # モックの設定
-        mock_get.return_value = [
+        client_mock.get.return_value = [
             {
                 'customer_group_id': 1,
                 'name': 'アドレス帳1',
@@ -39,38 +35,36 @@ class TestCustomerGroupResource(unittest.TestCase):
         ]
 
         # テスト対象メソッドの実行
-        result = self.client.customer_groups.list()
+        result = customer_group_resource.list()
 
         # 検証
-        mock_get.assert_called_once_with('customer_groups')
-        self.assertEqual(len(result), 2)
-        self.assertIsInstance(result[0], CustomerGroup)
-        self.assertEqual(result[0].customer_group_id, 1)
-        self.assertEqual(result[0].name, 'アドレス帳1')
-        self.assertEqual(result[0].message_box_ids, [1])
-        self.assertIsInstance(result[1], CustomerGroup)
-        self.assertEqual(result[1].customer_group_id, 2)
-        self.assertEqual(result[1].name, 'アドレス帳2')
-        self.assertEqual(result[1].message_box_ids, [1, 2])
+        client_mock.get.assert_called_once_with('customer_groups')
+        assert len(result) == 2
+        assert isinstance(result[0], CustomerGroup)
+        assert result[0].customer_group_id == 1
+        assert result[0].name == 'アドレス帳1'
+        assert result[0].message_box_ids == [1]
+        assert isinstance(result[1], CustomerGroup)
+        assert result[1].customer_group_id == 2
+        assert result[1].name == 'アドレス帳2'
+        assert result[1].message_box_ids == [1, 2]
 
-    @patch.object(RelationClient, 'get')
-    def test_list_empty(self, mock_get):
+    def test_list_empty(self, customer_group_resource, client_mock):
         """list メソッドが空レスポンスで空リストを返すことを確認"""
         # モックの設定
-        mock_get.return_value = []
+        client_mock.get.return_value = []
 
         # テスト対象メソッドの実行
-        result = self.client.customer_groups.list()
+        result = customer_group_resource.list()
 
         # 検証
-        mock_get.assert_called_once_with('customer_groups')
-        self.assertEqual(result, [])
+        client_mock.get.assert_called_once_with('customer_groups')
+        assert result == []
 
-    @patch.object(RelationClient, 'get')
-    def test_list_default_message_box_ids(self, mock_get):
+    def test_list_default_message_box_ids(self, customer_group_resource, client_mock):
         """message_box_ids が欠落している場合に空リストになることを確認"""
         # モックの設定（message_box_ids を省略）
-        mock_get.return_value = [
+        client_mock.get.return_value = [
             {
                 'customer_group_id': 10,
                 'name': 'アドレス帳X',
@@ -78,17 +72,13 @@ class TestCustomerGroupResource(unittest.TestCase):
         ]
 
         # テスト対象メソッドの実行
-        result = self.client.customer_groups.list()
+        result = customer_group_resource.list()
 
         # 検証
-        mock_get.assert_called_once_with('customer_groups')
-        self.assertEqual(len(result), 1)
-        self.assertIsInstance(result[0], CustomerGroup)
-        self.assertEqual(result[0].customer_group_id, 10)
-        self.assertEqual(result[0].name, 'アドレス帳X')
-        self.assertEqual(result[0].message_box_ids, [])
-        self.assertIsNone(result[0].last_updated_at)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        client_mock.get.assert_called_once_with('customer_groups')
+        assert len(result) == 1
+        assert isinstance(result[0], CustomerGroup)
+        assert result[0].customer_group_id == 10
+        assert result[0].name == 'アドレス帳X'
+        assert result[0].message_box_ids == []
+        assert result[0].last_updated_at is None
